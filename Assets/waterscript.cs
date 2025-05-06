@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 
 public class waterscript : MonoBehaviour
 {
-    Vector2 boundsSize;
+        Vector2 boundsSize;
     void Start()
     {
         boundsSize.x = 12;

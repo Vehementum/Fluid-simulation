@@ -74,7 +74,7 @@ public class FluidSimulator : MonoBehaviour
             Vector2 randomPosition = CreateRandomVector(i);
             
             // Initialize the Particle struct
-            particles[i] = new Particle { position = randomPosition, velocity = Vector2.one };
+            particles[i] = new Particle { position = randomPosition, velocity = Vector2.zero };
             positions[i] = randomPosition;
             velocities[i] = particles[i].velocity;
             densities[i] = 1f; // Initialize density to zero
@@ -163,7 +163,7 @@ public class FluidSimulator : MonoBehaviour
     static float smoothing_kernel_derivative(float radius, float dst)
     {
         if (dst > radius) return 0f; // Outside influence radius
-        float scale = 12 / Mathf.Pow(radius, 4) * Mathf.PI; // Scale factor for derivative
+        float scale = 3 / Mathf.Pow(radius, 3) * Mathf.PI; // Scale factor for derivative
         return (dst - radius) * scale;
     }
     float CalculateDensity(Vector2 samplePoint)

@@ -86,6 +86,12 @@ public class FluidSimulator : MonoBehaviour
 
     void Update()
     {
+        // Basic_update(); // Call the basic update function
+        SimulationStep(Time.deltaTime); // Call the simulation step function
+    }
+
+    void Basic_update()
+    {
         // Update particles' positions and velocities
         for (int i = 0; i < particleCount; i++)
         {
@@ -105,9 +111,7 @@ public class FluidSimulator : MonoBehaviour
             ParticleComponent particleComponent = particleTransforms[i].GetComponent<ParticleComponent>();
             particleComponent.particleData = particles[i];
         }
-        // SimulationStep(Time.deltaTime); // Call the simulation step function
     }
-
     void ResolveCollisions(ref Vector2 position, ref Vector2 velocity)
     {
         Vector2 halfBoundSize = boundsSize / 2;
@@ -132,6 +136,20 @@ public class FluidSimulator : MonoBehaviour
         float volume = (Mathf.PI * Mathf.Pow(radius,4)) / 6; // Volume of the sphere
         return (radius - dst) * (radius - dst) / volume;
     }
+
+    static float smoothing_kernel2(float h, float r)
+    {
+        if (r > h) return 0f;
+        float a = 4f / (Mathf.PI * Mathf.Pow(h, 8));
+        return a * Mathf.Pow(h * h - r * r, 3);
+    }
+    static float smoothing_kernel_derivative2(float h, float r)
+    {
+        if (r > h || r == 0f) return 0f;
+        float a = -24f / (Mathf.PI * Mathf.Pow(h, 8));
+        return a * r * Mathf.Pow(h * h - r * r, 2);
+    }
+
     static float smoothing_kernel_derivative(float radius, float dst)
     {
         if (dst > radius) return 0f; // Outside influence radius
@@ -147,7 +165,7 @@ public class FluidSimulator : MonoBehaviour
         foreach(Vector2 position in positions)
         {
             float distance = (position - samplePoint).magnitude;
-            float influence = smoothing_kernel(smoothingRadius, distance);
+            float influence = smoothing_kernel2(smoothingRadius, distance);
             density += mass * influence;
         }
         return density;
@@ -185,8 +203,10 @@ public class FluidSimulator : MonoBehaviour
             Particle particle = particles[i];
             float mass = 1f; // Mass of the particle (can be adjusted based on your simulation)
             float distance = (positions[i] - samplePoint).magnitude;
+            if (distance == 0 || densities[i] == 0)
+                continue;
             Vector2 direction = (positions[i] - samplePoint)/distance; // Normalize direction vector
-            float slope = smoothing_kernel_derivative(smoothingRadius, distance);
+            float slope = smoothing_kernel_derivative2(smoothingRadius, distance);
             float density = densities[i];
             pressureforce += - ConvertDensityToPressure(density) * direction * slope * mass / density;// Pressure force calculation
         }
@@ -207,6 +227,7 @@ public class FluidSimulator : MonoBehaviour
         {
             velocities[i] +=Vector2.down * gravity * deltaTime; // Apply gravity to velocity
             densities[i] = CalculateDensity(positions[i]); // Update density for each particle
+            
         }
         for(int i = 0; i < particleCount; i++){
             Vector2 pressureForce = CalculatePressureForce(positions[i]); // Calculate pressure force
@@ -216,6 +237,18 @@ public class FluidSimulator : MonoBehaviour
         for(int i = 0; i < particleCount; i++){
             positions[i] += velocities[i] * deltaTime; // Update position based on velocity
             ResolveCollisions(ref positions[i], ref velocities[i]); // Resolve collisions with bounds
+        }
+        for(int i = 0; i < particleCount; i++)
+        {
+            particles[i].position = positions[i];
+            particles[i].velocity = velocities[i];
+        // Update the visual prefab position based on the Particle struct data
+            particleTransforms[i].position = new Vector3(particles[i].position.x, particles[i].position.y, 0f);
+
+            // Update the ParticleComponent on the particle prefab
+            ParticleComponent particleComponent = particleTransforms[i].GetComponent<ParticleComponent>();
+            particleComponent.particleData = particles[i];
+
         }
     }
 

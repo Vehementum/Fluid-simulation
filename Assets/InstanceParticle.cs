@@ -285,7 +285,7 @@ public class FluidSimulator : MonoBehaviour
             densities[i] = CalculatePredictedDensity(PredictedPositions[i]); // Update density for each particle
         }
         for(int i = 0; i < particleCount; i++){
-            Vector2 pressureForce = CalculatePredictedPressureForce(PredictedPositions[i], i); // Calculate pressure force
+            Vector2 pressureForce = CalculatePredictPressureForce(PredictedPositions[i], i); // Calculate pressure force
             Vector2 pressureAcceleration = pressureForce / densities[i]; // Calculate acceleration from pressure force
             velocities[i] += pressureAcceleration * deltaTime; // Update velocity based on pressure acceleration
         }

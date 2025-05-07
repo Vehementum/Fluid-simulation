@@ -76,6 +76,7 @@ public class FluidSimulator : MonoBehaviour
             // Initialize the Particle struct
             particles[i] = new Particle { position = randomPosition, velocity = Vector2.zero };
             positions[i] = randomPosition;
+            PredictedPositions[i] = positions[i];
             velocities[i] = particles[i].velocity;
             densities[i] = 1f; // Initialize density to zero
 
@@ -143,8 +144,8 @@ public class FluidSimulator : MonoBehaviour
     static float smoothing_kernel(float radius, float dst)
     {
         if (dst > radius) return 0f; // Outside influence radius
-        float volume = (2*Mathf.PI * Mathf.Pow(radius,3)) / 3; // Volume of the sphere
-        return (radius - dst) * (radius - dst) / volume;
+        float volume = (8*Mathf.PI * Mathf.Pow(radius,3)) / 3; // Volume of the sphere
+        return 4*(radius - dst) * (radius - dst) / volume;
     }
 
     static float smoothing_kernel2(float h, float r)
@@ -163,8 +164,8 @@ public class FluidSimulator : MonoBehaviour
     static float smoothing_kernel_derivative(float radius, float dst)
     {
         if (dst > radius) return 0f; // Outside influence radius
-        float scale = 3 / Mathf.Pow(radius, 3) * Mathf.PI; // Scale factor for derivative
-        return (dst - radius) * scale;
+        float scale = 12 / Mathf.Pow(radius, 3) * Mathf.PI; // Scale factor for derivative
+        return 4*(dst - radius) * scale;
     }
     float CalculateDensity(Vector2 samplePoint)
     {
@@ -175,6 +176,22 @@ public class FluidSimulator : MonoBehaviour
         foreach (int i in GetNeighbors(samplePoint))
         {
             Vector2 position = positions[i];
+            float distance = (position - samplePoint).magnitude;
+            float influence = smoothing_kernel(smoothingRadius, distance);
+            density += mass * influence;
+        }
+        return density;
+    }
+
+    float CalculatePredictedDensity(Vector2 samplePoint)
+    {
+       float density = 0f;
+       const float mass = 1;
+
+       // Iterate through all particles to calculate density at the sample point
+        foreach (int i in GetNeighbors(samplePoint))
+        {
+            Vector2 position = PredictedPositions[i];
             float distance = (position - samplePoint).magnitude;
             float influence = smoothing_kernel(smoothingRadius, distance);
             density += mass * influence;
@@ -225,6 +242,26 @@ public class FluidSimulator : MonoBehaviour
         return pressureforce;
 
     }
+    Vector2 CalculatePredictPressureForce(Vector2 samplePoint, int index)
+    {
+        Vector2 pressureforce = Vector2.zero;
+        // Iterate through all particles to calculate property gradient at the sample point
+        foreach (int i in GetNeighbors(samplePoint))
+        {
+            Particle particle = particles[i];
+            float mass = 1f; // Mass of the particle (can be adjusted based on your simulation)
+            float distance = (PredictedPositions[i] - samplePoint).magnitude;
+            if (distance == 0 || densities[i] == 0)
+                continue;
+            Vector2 direction = (PredictedPositions[i] - samplePoint)/distance; // Normalize direction vector
+            float slope = smoothing_kernel_derivative(smoothingRadius, distance);
+            float density = densities[i];
+            float sharedPressure = CalculateSharedPressure(density, densities[index]); // Calculate shared pressure
+            pressureforce += - sharedPressure * direction * slope * mass / density;// Pressure force calculation
+        }
+        return pressureforce;
+
+    }
 
     float ConvertDensityToPressure(float density)
     {
@@ -240,13 +277,15 @@ public class FluidSimulator : MonoBehaviour
             velocities[i] +=Vector2.down * gravity * deltaTime; // Apply gravity to velocity
             PredictedPositions[i] = positions[i] + velocities[i] * deltaTime; // Predict new position
         }
+        
         UpdateSpatialGrid();
+        
         for(int i = 0; i < particleCount; i++)
         {
-            densities[i] = CalculateDensity(positions[i]); // Update density for each particle
+            densities[i] = CalculatePredictedDensity(PredictedPositions[i]); // Update density for each particle
         }
         for(int i = 0; i < particleCount; i++){
-            Vector2 pressureForce = CalculatePressureForce(positions[i], i); // Calculate pressure force
+            Vector2 pressureForce = CalculatePredictedPressureForce(PredictedPositions[i], i); // Calculate pressure force
             Vector2 pressureAcceleration = pressureForce / densities[i]; // Calculate acceleration from pressure force
             velocities[i] += pressureAcceleration * deltaTime; // Update velocity based on pressure acceleration
         }
@@ -289,7 +328,7 @@ public class FluidSimulator : MonoBehaviour
 
         for (int i = 0; i < particleCount; i++)
         {
-            Vector2Int cell = GetCell(positions[i]);
+            Vector2Int cell = GetCell(PredictedPositions[i]);
             if (!spatialGrid.ContainsKey(cell))
                 spatialGrid[cell] = new List<int>();
 

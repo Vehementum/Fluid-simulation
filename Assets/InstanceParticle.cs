@@ -1,5 +1,7 @@
 using UnityEngine;
 using Unity.Mathematics;
+using System.Collections.Generic;
+
 public class FluidSimulator : MonoBehaviour
 {
     // Particle struct for simulation data
@@ -28,6 +30,9 @@ public class FluidSimulator : MonoBehaviour
     public float smoothingRadius = 1f; // Smoothing radius for density calculation
     public float targetDensity = 1f; // Target density for pressure calculation
     public float pressureCoefficient = 1f; // Coefficient for pressure calculation
+
+    Dictionary<Vector2Int, List<int>> spatialGrid;
+    float cellSize;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Start()
@@ -82,10 +87,14 @@ public class FluidSimulator : MonoBehaviour
             // Store the particle's transform
             particleTransforms[i] = particle.transform;
         }
+        // Initialize spatial grid for optimization
+        cellSize = smoothingRadius; // Each cell covers the radius of influence
+        spatialGrid = new Dictionary<Vector2Int, List<int>>();
     }
 
     void Update()
     {
+        UpdateSpatialGrid();
         // Basic_update(); // Call the basic update function
         SimulationStep(Time.deltaTime); // Call the simulation step function
     }
@@ -162,10 +171,11 @@ public class FluidSimulator : MonoBehaviour
        const float mass = 1;
 
        // Iterate through all particles to calculate density at the sample point
-        foreach(Vector2 position in positions)
+        foreach (int i in GetNeighbors(samplePoint))
         {
+            Vector2 position = positions[i];
             float distance = (position - samplePoint).magnitude;
-            float influence = smoothing_kernel2(smoothingRadius, distance);
+            float influence = smoothing_kernel(smoothingRadius, distance);
             density += mass * influence;
         }
         return density;
@@ -198,7 +208,7 @@ public class FluidSimulator : MonoBehaviour
     {
         Vector2 pressureforce = Vector2.zero;
         // Iterate through all particles to calculate property gradient at the sample point
-        for(int i = 0; i < particleCount; i++)
+        foreach (int i in GetNeighbors(samplePoint))
         {
             Particle particle = particles[i];
             float mass = 1f; // Mass of the particle (can be adjusted based on your simulation)
@@ -206,7 +216,7 @@ public class FluidSimulator : MonoBehaviour
             if (distance == 0 || densities[i] == 0)
                 continue;
             Vector2 direction = (positions[i] - samplePoint)/distance; // Normalize direction vector
-            float slope = smoothing_kernel_derivative2(smoothingRadius, distance);
+            float slope = smoothing_kernel_derivative(smoothingRadius, distance);
             float density = densities[i];
             pressureforce += - ConvertDensityToPressure(density) * direction * slope * mass / density;// Pressure force calculation
         }
@@ -265,4 +275,49 @@ public class FluidSimulator : MonoBehaviour
         float y = (index / Mathf.Sqrt(particleCount)) * particleSpacing - boundsSize.y / 2f;
         return new Vector2(x, y);
     }
+
+    void UpdateSpatialGrid()
+    {
+        if (positions == null || positions.Length != particleCount)
+            return;
+        spatialGrid.Clear();
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            Vector2Int cell = GetCell(positions[i]);
+            if (!spatialGrid.ContainsKey(cell))
+                spatialGrid[cell] = new List<int>();
+
+            spatialGrid[cell].Add(i);
+        }
+    }
+
+    Vector2Int GetCell(Vector2 pos)
+    {
+        return new Vector2Int(
+            Mathf.FloorToInt(pos.x / cellSize),
+            Mathf.FloorToInt(pos.y / cellSize)
+        );
+    }
+
+    IEnumerable<int> GetNeighbors(Vector2 position)
+    {
+        Vector2Int baseCell = GetCell(position);
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                Vector2Int neighborCell = new Vector2Int(baseCell.x + dx, baseCell.y + dy);
+                if (spatialGrid.TryGetValue(neighborCell, out List<int> indices))
+                {
+                    foreach (int i in indices)
+                    {
+                        yield return i;
+                    }
+                }
+            }
+        }
+    }
+
 }

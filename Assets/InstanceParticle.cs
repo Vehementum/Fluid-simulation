@@ -205,7 +205,7 @@ public class FluidSimulator : MonoBehaviour
         };
     }
 
-    Vector2 CalculatePressureForce(Vector2 samplePoint)
+    Vector2 CalculatePressureForce(Vector2 samplePoint, int index)
     {
         Vector2 pressureforce = Vector2.zero;
         // Iterate through all particles to calculate property gradient at the sample point
@@ -219,7 +219,8 @@ public class FluidSimulator : MonoBehaviour
             Vector2 direction = (positions[i] - samplePoint)/distance; // Normalize direction vector
             float slope = smoothing_kernel_derivative(smoothingRadius, distance);
             float density = densities[i];
-            pressureforce += - ConvertDensityToPressure(density) * direction * slope * mass / density;// Pressure force calculation
+            float sharedPressure = CalculateSharedPressure(density, densities[index]); // Calculate shared pressure
+            pressureforce += - sharedPressure * direction * slope * mass / density;// Pressure force calculation
         }
         return pressureforce;
 
@@ -245,7 +246,7 @@ public class FluidSimulator : MonoBehaviour
             densities[i] = CalculateDensity(positions[i]); // Update density for each particle
         }
         for(int i = 0; i < particleCount; i++){
-            Vector2 pressureForce = CalculatePressureForce(positions[i]); // Calculate pressure force
+            Vector2 pressureForce = CalculatePressureForce(positions[i], i); // Calculate pressure force
             Vector2 pressureAcceleration = pressureForce / densities[i]; // Calculate acceleration from pressure force
             velocities[i] += pressureAcceleration * deltaTime; // Update velocity based on pressure acceleration
         }
@@ -324,4 +325,10 @@ public class FluidSimulator : MonoBehaviour
         }
     }
 
+    float CalculateSharedPressure(float denityA, float densityB)
+    {
+        float pressureA = ConvertDensityToPressure(denityA);
+        float pressureB = ConvertDensityToPressure(densityB);
+        return (pressureA + pressureB) / 2f;
+    }
 }

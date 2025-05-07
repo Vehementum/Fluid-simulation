@@ -143,7 +143,7 @@ public class FluidSimulator : MonoBehaviour
     static float smoothing_kernel(float radius, float dst)
     {
         if (dst > radius) return 0f; // Outside influence radius
-        float volume = (Mathf.PI * Mathf.Pow(radius,4)) / 6; // Volume of the sphere
+        float volume = (2*Mathf.PI * Mathf.Pow(radius,3)) / 3; // Volume of the sphere
         return (radius - dst) * (radius - dst) / volume;
     }
 

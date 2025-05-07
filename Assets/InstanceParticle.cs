@@ -14,7 +14,7 @@ public class FluidSimulator : MonoBehaviour
     [Range(10, 10000)] public int particleCount = 10;
     [Range(0.1f, 5f)] public float particleSpacing = 0.2f;
     [Range(0.1f, 5f)] public float particleSize = 0.5f;
-    public Vector2 boundsSize = new Vector2(10f, 10f);
+    public Vector2 boundsSize = new Vector2(10f, 8f);
     public GameObject particlePrefab; // Assign in Inspector
     public Vector2[] positions;
     public Vector2[] velocities;
@@ -26,7 +26,6 @@ public class FluidSimulator : MonoBehaviour
 
     public float gravity = 9.81f; // Gravity constant
     public float smoothingRadius = 1f; // Smoothing radius for density calculation
-
     public float targetDensity = 1f; // Target density for pressure calculation
     public float pressureCoefficient = 1f; // Coefficient for pressure calculation
 
@@ -71,6 +70,7 @@ public class FluidSimulator : MonoBehaviour
             particles[i] = new Particle { position = randomPosition, velocity = Vector2.one };
             positions[i] = randomPosition;
             velocities[i] = particles[i].velocity;
+            densities[i] = 1f; // Initialize density to zero
 
             // Instantiate the prefab and get its ParticleComponent
             GameObject particle = Instantiate(particlePrefab, new Vector3(randomPosition.x, randomPosition.y, 0f), Quaternion.identity);
@@ -113,16 +113,16 @@ public class FluidSimulator : MonoBehaviour
         Vector2 halfBoundSize = boundsSize / 2;
 
         // Check for X bound collision
-        if (Mathf.Abs(position.x) > halfBoundSize.x)
+        if (Mathf.Abs(position.x) > halfBoundSize.x - 0.1f)
         {
-            position.x = halfBoundSize.x * Mathf.Sign(position.x);
+            position.x = (halfBoundSize.x - 0.1f) * Mathf.Sign(position.x);
             velocity.x *= -1f * Dampening_factor; // Reverse velocity on collision
         }
 
         // Check for Y bound collision
-        if (Mathf.Abs(position.y) > halfBoundSize.y)
+        if (Mathf.Abs(position.y) > halfBoundSize.y - 0.1f)
         {
-            position.y = halfBoundSize.y * Mathf.Sign(position.y);
+            position.y = (halfBoundSize.y - 0.1f) * Mathf.Sign(position.y);
             velocity.y *= -1f * Dampening_factor; // Reverse velocity on collision
         }
     }
@@ -223,6 +223,13 @@ public class FluidSimulator : MonoBehaviour
     {
         float x = (float)(UnityEngine.Random.Range(0f, 1f) -0.5) * boundsSize.x;
         float y = (float)(UnityEngine.Random.Range(0f, 1f) -0.5) * boundsSize.y;
+        return new Vector2(x, y);
+    }
+
+    Vector2 CreateGridVector(int index)
+    {
+        float x = (index % Mathf.Sqrt(particleCount)) * particleSpacing - boundsSize.x / 2f;
+        float y = (index / Mathf.Sqrt(particleCount)) * particleSpacing - boundsSize.y / 2f;
         return new Vector2(x, y);
     }
 }

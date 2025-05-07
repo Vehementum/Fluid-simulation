@@ -3,7 +3,7 @@ using System.Linq;
 [RequireComponent(typeof(LineRenderer))]
 public class BoundsRenderer : MonoBehaviour
 {
-    public Vector2 boundsSize = new Vector2(10.5f, 8.5f);
+    public Vector2 boundsSize;
 
     void Start()
     {

@@ -20,6 +20,7 @@ public class FluidSimulator : MonoBehaviour
     public GameObject particlePrefab; // Assign in Inspector
     public Vector2[] positions;
     public Vector2[] velocities;
+    public Vector2[] PredictedPositions; // Store predicted positions for rendering
     private Transform[] particleTransforms; // Store transforms for rendering
 
     public float[] densities;
@@ -65,6 +66,7 @@ public class FluidSimulator : MonoBehaviour
         positions = new Vector2[particleCount];
         velocities = new Vector2[particleCount];
         densities = new float[particleCount];
+        PredictedPositions = new Vector2[particleCount];
 
         // Place particles in a grid
         for (int i = 0; i < particleCount; i++)
@@ -94,7 +96,6 @@ public class FluidSimulator : MonoBehaviour
 
     void Update()
     {
-        UpdateSpatialGrid();
         // Basic_update(); // Call the basic update function
         SimulationStep(Time.deltaTime); // Call the simulation step function
     }
@@ -126,16 +127,16 @@ public class FluidSimulator : MonoBehaviour
         Vector2 halfBoundSize = boundsSize / 2;
 
         // Check for X bound collision
-        if (Mathf.Abs(position.x) > halfBoundSize.x - 0.1f)
+        if (Mathf.Abs(position.x) > halfBoundSize.x - particleSize)
         {
-            position.x = (halfBoundSize.x - 0.1f) * Mathf.Sign(position.x);
+            position.x = (halfBoundSize.x - particleSize) * Mathf.Sign(position.x);
             velocity.x *= -1f * Dampening_factor; // Reverse velocity on collision
         }
 
         // Check for Y bound collision
-        if (Mathf.Abs(position.y) > halfBoundSize.y - 0.1f)
+        if (Mathf.Abs(position.y) > halfBoundSize.y - particleSize)
         {
-            position.y = (halfBoundSize.y - 0.1f) * Mathf.Sign(position.y);
+            position.y = (halfBoundSize.y - particleSize) * Mathf.Sign(position.y);
             velocity.y *= -1f * Dampening_factor; // Reverse velocity on collision
         }
     }
@@ -236,8 +237,12 @@ public class FluidSimulator : MonoBehaviour
         for(int i = 0; i < particleCount; i++)
         {
             velocities[i] +=Vector2.down * gravity * deltaTime; // Apply gravity to velocity
+            PredictedPositions[i] = positions[i] + velocities[i] * deltaTime; // Predict new position
+        }
+        UpdateSpatialGrid();
+        for(int i = 0; i < particleCount; i++)
+        {
             densities[i] = CalculateDensity(positions[i]); // Update density for each particle
-            
         }
         for(int i = 0; i < particleCount; i++){
             Vector2 pressureForce = CalculatePressureForce(positions[i]); // Calculate pressure force
@@ -258,7 +263,6 @@ public class FluidSimulator : MonoBehaviour
             // Update the ParticleComponent on the particle prefab
             ParticleComponent particleComponent = particleTransforms[i].GetComponent<ParticleComponent>();
             particleComponent.particleData = particles[i];
-
         }
     }
 

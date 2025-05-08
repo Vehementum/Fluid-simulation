@@ -123,6 +123,7 @@ public class FluidSimulator : MonoBehaviour
             particleComponent.particleData = particles[i];
         }
     }
+
     void ResolveCollisions(ref Vector2 position, ref Vector2 velocity)
     {
         Vector2 halfBoundSize = boundsSize / 2;
@@ -148,18 +149,18 @@ public class FluidSimulator : MonoBehaviour
         return 4*(radius - dst) * (radius - dst) / volume;
     }
 
-    static float smoothing_kernel2(float h, float r)
-    {
-        if (r > h) return 0f;
-        float a = 4f / (Mathf.PI * Mathf.Pow(h, 8));
-        return a * Mathf.Pow(h * h - r * r, 3);
-    }
-    static float smoothing_kernel_derivative2(float h, float r)
-    {
-        if (r > h || r == 0f) return 0f;
-        float a = -24f / (Mathf.PI * Mathf.Pow(h, 8));
-        return a * r * Mathf.Pow(h * h - r * r, 2);
-    }
+    // static float smoothing_kernel2(float h, float r)
+    // {
+    //     if (r > h) return 0f;
+    //     float a = 4f / (Mathf.PI * Mathf.Pow(h, 8));
+    //     return a * Mathf.Pow(h * h - r * r, 3);
+    // }
+    // static float smoothing_kernel_derivative2(float h, float r)
+    // {
+    //     if (r > h || r == 0f) return 0f;
+    //     float a = -24f / (Mathf.PI * Mathf.Pow(h, 8));
+    //     return a * r * Mathf.Pow(h * h - r * r, 2);
+    // }
 
     static float smoothing_kernel_derivative(float radius, float dst)
     {
@@ -270,6 +271,36 @@ public class FluidSimulator : MonoBehaviour
         return pressure;
     }
 
+    float ConvertDensityToPressure2(float density) // Prevent explosion near borders
+{
+    float gamma = 7f; // Tait equation gamma
+    float restDensity = targetDensity;
+    float stiffness = pressureCoefficient;
+
+    if (density <= 0f) return 0f;
+    return stiffness * (Mathf.Pow(density / restDensity, gamma) - 1f);
+}
+
+    Vector2 CalculateViscosityForce(Vector2 samplePoint, int index)
+    {
+        Vector2 viscosityForce = Vector2.zero;
+        float mu = 0.1f; // Viscosity coefficient
+        float mass = 1f;
+
+        foreach (int i in GetNeighbors(samplePoint))
+        {
+            if (i == index) continue;
+            float distance = (PredictedPositions[i] - samplePoint).magnitude;
+            if (distance > smoothingRadius) continue;
+
+            Vector2 velDiff = velocities[i] - velocities[index];
+            float influence = smoothing_kernel(smoothingRadius, distance);
+            viscosityForce += mu * velDiff * influence / densities[i];
+        }
+
+        return viscosityForce;
+    }
+
     void SimulationStep(float deltaTime)
     {
         for(int i = 0; i < particleCount; i++)
@@ -286,8 +317,9 @@ public class FluidSimulator : MonoBehaviour
         }
         for(int i = 0; i < particleCount; i++){
             Vector2 pressureForce = CalculatePredictPressureForce(PredictedPositions[i], i); // Calculate pressure force
+            Vector2 viscosityForce = CalculateViscosityForce(PredictedPositions[i], i); // Calculate viscosity force
             Vector2 pressureAcceleration = pressureForce / densities[i]; // Calculate acceleration from pressure force
-            velocities[i] += pressureAcceleration * deltaTime; // Update velocity based on pressure acceleration
+            velocities[i] += (pressureAcceleration + viscosityForce) * deltaTime; // Update velocity based on pressure acceleration
         }
         for(int i = 0; i < particleCount; i++){
             positions[i] += velocities[i] * deltaTime; // Update position based on velocity
@@ -366,8 +398,8 @@ public class FluidSimulator : MonoBehaviour
 
     float CalculateSharedPressure(float denityA, float densityB)
     {
-        float pressureA = ConvertDensityToPressure(denityA);
-        float pressureB = ConvertDensityToPressure(densityB);
+        float pressureA = ConvertDensityToPressure2(denityA);
+        float pressureB = ConvertDensityToPressure2(densityB);
         return (pressureA + pressureB) / 2f;
     }
 }

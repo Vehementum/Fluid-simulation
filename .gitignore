@@ -17,3 +17,6 @@ MemoryCaptures/
 *.vcxproj.filters
 *.idea/
 .vscode/
+rapport/rapport.aux
+rapport/rappor.log
+rapport/rappor.toc

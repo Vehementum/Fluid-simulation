@@ -1,0 +1,301 @@
+This is LuaHBTeX, Version 1.18.0 (TeX Live 2024/nixos.org)  (format=lualatex 1980.1.1)  9 MAY 2025 07:28
+ restricted system commands enabled.
+**rapport.tex
+(./rapport.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+Lua module: luaotfload 2024-12-03 v3.29 Lua based OpenType font support
+Lua module: lualibs 2023-07-13 v2.76 ConTeXt Lua standard libraries.
+Lua module: lualibs-extended 2023-07-13 v2.76 ConTeXt Lua libraries -- extended 
+collection.
+luaotfload | conf : Root cache directory is "/home/julia/.texlive2024/texmf-var/
+luatex-cache/generic/names".
+luaotfload | init : Loading fontloader "fontloader-2023-12-28.lua" from kpse-res
+olved path "/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-te
+xmfdist/tex/luatex/luaotfload/fontloader-2023-12-28.lua".
+Lua-only attribute luaotfload@noligature = 1
+luaotfload | init : Context OpenType loader version 3.134
+Inserting `luaotfload.node_processor' in `pre_linebreak_filter'.
+Inserting `luaotfload.node_processor' in `hpack_filter'.
+Inserting `luaotfload.glyph_stream' in `glyph_stream_provider'.
+Inserting `luaotfload.define_font' in `define_font'.
+Lua-only attribute luaotfload_color_attribute = 2
+luaotfload | conf : Root cache directory is "/home/julia/.texlive2024/texmf-var/
+luatex-cache/generic/names".
+Inserting `luaotfload.harf.strip_prefix' in `find_opentype_file'.
+Inserting `luaotfload.harf.strip_prefix' in `find_truetype_file'.
+Removing  `luaotfload.glyph_stream' from `glyph_stream_provider'.
+Inserting `luaotfload.harf.glyphstream' in `glyph_stream_provider'.
+Inserting `luaotfload.harf.finalize_vlist' in `post_linebreak_filter'.
+Inserting `luaotfload.harf.finalize_hlist' in `hpack_filter'.
+Inserting `luaotfload.cleanup_files' in `wrapup_run'.
+Inserting `luaotfload.harf.finalize_unicode' in `finish_pdffile'.
+Inserting `luaotfload.glyphinfo' in `glyph_info'.
+Lua-only attribute luaotfload.letterspace_done = 3
+Inserting `luaotfload.aux.set_sscale_dimens' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.set_font_index' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.patch_cambria_domh' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.fixup_fontdata' in `luaotfload.patch_font_unsafe'.
+Inserting `luaotfload.aux.set_capheight' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.set_xheight' in `luaotfload.patch_font'.
+Inserting `luaotfload.rewrite_fontname' in `luaotfload.patch_font'.
+Inserting `tracingstacklevels' in `input_level_string'.
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/latex/base/article.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/latex/base/size10.clo
+File: size10.clo 2024/06/29 v1.4n Standard LaTeX file (size option)
+luaotfload | db : Font names database loaded from /home/julia/.texlive2024/texmf
+-var/luatex-cache/generic/names/luaotfload-names.luc.gz)
+\c@part=\count194
+\c@section=\count195
+\c@subsection=\count196
+\c@subsubsection=\count197
+\c@paragraph=\count198
+\c@subparagraph=\count199
+\c@figure=\count266
+\c@table=\count267
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen140
+)
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/babel/babel.sty
+Package: babel 2025/02/14 v25.4 The multilingual framework for pdfLaTeX, LuaLaT
+eX and XeLaTeX
+
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/babel/luababel.def
+\bbl@readstream=\read2
+\l@dumylang=\language2
+Package babel Info: Non-standard hyphenation setup on input line 118.
+\l@nohyphenation=\language3
+\l@vietnamese=\language4
+\l@hebrew=\language5
+\l@german-x-2024-02-28=\language6
+\l@ngerman-x-2024-02-28=\language7
+\l@afrikaans=\language8
+\l@albanian=\language9
+\l@ancientgreek=\language10
+\l@ibycus=\language11
+\l@arabic=\language12
+\l@armenian=\language13
+\l@basque=\language14
+\l@belarusian=\language15
+\l@bulgarian=\language16
+\l@catalan=\language17
+\l@pinyin=\language18
+\l@churchslavonic=\language19
+\l@coptic=\language20
+\l@croatian=\language21
+\l@czech=\language22
+\l@danish=\language23
+\l@dutch=\language24
+\l@ukenglish=\language25
+\l@usenglishmax=\language26
+\l@esperanto=\language27
+\l@estonian=\language28
+\l@ethiopic=\language29
+\l@farsi=\language30
+\l@finnish=\language31
+\l@schoolfinnish=\language32
+\l@french=\language33
+\l@friulan=\language34
+\l@galician=\language35
+\l@georgian=\language36
+\l@german=\language37
+\l@ngerman=\language38
+\l@swissgerman=\language39
+\l@greek=\language40
+\l@monogreek=\language41
+\l@hungarian=\language42
+\l@icelandic=\language43
+\l@assamese=\language44
+\l@bengali=\language45
+\l@gujarati=\language46
+\l@hindi=\language47
+\l@kannada=\language48
+\l@malayalam=\language49
+\l@marathi=\language50
+\l@oriya=\language51
+\l@pali=\language52
+\l@panjabi=\language53
+\l@tamil=\language54
+\l@telugu=\language55
+\l@indonesian=\language56
+\l@interlingua=\language57
+\l@irish=\language58
+\l@italian=\language59
+\l@kurmanji=\language60
+\l@classiclatin=\language61
+\l@latin=\language62
+\l@liturgicallatin=\language63
+\l@latvian=\language64
+\l@lithuanian=\language65
+\l@macedonian=\language66
+\l@mongolian=\language67
+\l@mongolianlmc=\language68
+\l@bokmal=\language69
+\l@nynorsk=\language70
+\l@occitan=\language71
+\l@piedmontese=\language72
+\l@polish=\language73
+\l@portuguese=\language74
+\l@romanian=\language75
+\l@romansh=\language76
+\l@russian=\language77
+\l@sanskrit=\language78
+\l@serbian=\language79
+\l@serbianc=\language80
+\l@slovak=\language81
+\l@slovenian=\language82
+\l@spanish=\language83
+\l@swedish=\language84
+\l@thai=\language85
+\l@turkish=\language86
+\l@turkmen=\language87
+\l@ukrainian=\language88
+\l@uppersorbian=\language89
+\l@welsh=\language90
+\babelcatcodetablenum=\catcodetable14
+\bbl@pattcodes=\catcodetable15
+)
+\babel@savecnt=\count268
+\U@D=\dimen141
+\l@unhyphenated=\language91
+
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/babel/luababel.def
+\bbl@attr@locale=\attribute4
+)
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/babel-french/french.ldf
+Language: french 2024-07-25 v3.6c French support from the babel system
+Package babel Info: Hyphen rules for 'acadian' set to \l@french
+(babel)             (\language33). Reported on input line 91.
+Package babel Info: Hyphen rules for 'canadien' set to \l@french
+(babel)             (\language33). Reported on input line 92.
+\FB@stdchar=\count269
+\FB@spacing=\attribute5
+\FB@addDPspace=\attribute6
+\FB@addGUILspace=\attribute7
+\FB@ucsNBSP=\attribute8
+\FB@dialect=\attribute9
+Package french.ldf Info: No need for active punctuation characters
+(french.ldf)             with this version of LuaTeX!
+(french.ldf)             reported on input line 250.
+\FBguill@level=\count270
+\FBold@everypar=\toks17
+\FB@Mht=\dimen142
+\mc@charclass=\count271
+\mc@charfam=\count272
+\mc@charslot=\count273
+\std@mcc=\count274
+\dec@mcc=\count275
+Inserting `frenchb.french_punctuation' in `kerning'.
+\FB@parskip=\dimen143
+\listindentFB=\dimen144
+\descindentFB=\dimen145
+\labelindentFB=\dimen146
+\labelwidthFB=\dimen147
+\leftmarginFB=\dimen148
+\parindentFFN=\dimen149
+\FBfnindent=\dimen150
+
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/hyph-utf8/loadhyph/loadhyph-fr.tex UTF-8 French hyphenation patterns
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/hyph-utf8/patterns/tex/hyph-fr.tex)
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/hyph-utf8/patterns/quote/hyph-quote-fr.tex))))
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/generic/babel/locale/fr/babel-french.tex
+Package babel Info: Importing font and identification data for french
+(babel)             from babel-fr.ini. Reported on input line 11.
+)
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/latex/carlisle/scalefnt.sty)
+(/nix/store/zis5adl4zinw4jzbhzd2mxxrcjqab202-texlive-combined-2024-texmfdist/te
+x/latex/l3backend/l3backend-luatex.def
+File: l3backend-luatex.def 2024-05-08 L3 backend support: PDF output (LuaTeX)
+\l__color_backend_stack_int=\count276
+Inserting `l3color' in `luaotfload.parse_color'.
+\l__pdf_internal_box=\box52
+) (./rapport.aux)
+\openout1 = rapport.aux
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Info: Redefining \degres on input line 7.
+LaTeX Info: Redefining \up on input line 7.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 8.
+
+
+[1
+
+{/nix/store/4n9kb05g8ij5nh8v8n1rmf2z8mmc7jns-texlive-combined-2024/share/texmf-v
+ar/fonts/map/pdftex/updmap/pdftex.map}] (./rapport.toc
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 4.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 4.
+)
+\tf@toc=\write3
+
+\openout3 = rapport.toc
+
+
+[2]
+
+[3] (./rapport.aux)
+ ***********
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+ ***********
+)
+
+Here is how much of LuaTeX's memory you used:
+ 2547 strings out of 475512
+ 100000,662416 words of node,token memory allocated
+ 513 words of node memory still in use:
+   4 hlist, 1 vlist, 1 rule, 5 glue, 3 kern, 1 penalty, 2 glyph, 33 attribute, 4
+9 glue_spec, 6 attribute_list, 1 write nodes
+   avail lists: 2:525,3:76,4:6,5:76,6:30,7:660,8:1,9:106,10:7,11:50
+ 25587 multiletter control sequences out of 65536+600000
+ 40 fonts using 2695375 bytes
+ 52i,6n,49p,169b,257s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</nix/store/swxn2kgfg47a8r0igh45r51c7x3mk92s-lm-2.005-tex/fonts/opentype/public/
+lm/lmroman10-bold.otf></nix/store/swxn2kgfg47a8r0igh45r51c7x3mk92s-lm-2.005-tex/
+fonts/opentype/public/lm/lmroman12-bold.otf></nix/store/swxn2kgfg47a8r0igh45r51c
+7x3mk92s-lm-2.005-tex/fonts/opentype/public/lm/lmroman10-regular.otf></nix/store
+/swxn2kgfg47a8r0igh45r51c7x3mk92s-lm-2.005-tex/fonts/opentype/public/lm/lmroman1
+2-regular.otf></nix/store/swxn2kgfg47a8r0igh45r51c7x3mk92s-lm-2.005-tex/fonts/op
+entype/public/lm/lmroman17-regular.otf>
+Output written on rapport.pdf (3 pages, 23120 bytes).
+
+PDF statistics: 49 PDF objects out of 1000 (max. 8388607)
+ 28 compressed objects within 1 object stream
+ 0 named destinations out of 1000 (max. 131072)
+ 1 words of extra memory for PDF output out of 10000 (max. 100000000)
+

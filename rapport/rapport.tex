@@ -282,9 +282,30 @@ Une force de gravité est aussi appliquer à chaque particules:
 \]
 
 \section{Le projet}
-\subsection{Pre-Unity: le choix de rust}
-TODO
-\subsection{Post-Unity: l'abandon de rust}
+
+\subsection{Pre-Unity: Le choix de rust}
+
+Nous (surtout Jacques) avons commencé avec de (trop) grandes ambitions sur le setup du projet.
+
+\begin{itemize}
+    \item le faire en {\emph {rust}} pour avoir des très bonnes performances.
+    \item implementer le build avec {\emph {nix}} pour une gestion automatique de {\emph {toutes}} dépendences (incluant obtenir rust, pour avoir la même version, le même système pour nous tous) avec {\emph {crane}}.
+    \item une gestions de faille de sécurités par un repot d'audit de packets, analyseur statique d'appelle insécure en temps qu'option de base d'utiliser crane!
+    \item pouvoir faire du cross-platform, et compiler notre code rust dans le CI pour plusieurs architectures et OS.
+    \item utiliser {\emph {nom}}, une librairies rust de grandeurs physiques, qui nous permettrait d'enlever tout bug correspondant à mélanger des éléments de grandeurs différents (qui sont forcément des bugs, car dépendant du choix exacte de grandeur)
+\end{itemize}
+
+Des questions se sont poser sur comment faire une fenêtre en rust, il y a très loins qu'une seule option, les deux idées prédominantes ont été d'utiliser la librairie {\emph {bevy}} ou {\emph {SDL2}} (proposition de Jacques, ayant un peu d'expérience en SDL2 dans d'autres langages (C)) ou de manière plus bas niveau, {\emph {wgpu}} (proposition de Stéphane).
+
+De manière merveilleuse, on n'aurait même pas à gerer l'installation de SDL2 grâce à nix! Et lier la librairie statiquement aurait fait que il n'y aurait pas eu besoin pour les utilisateur•ices d'installer quoi que ce soit, juste l'executable.
+
+Mais il y a eu des mais, essayer de setup le cross-platform était vraiment frustrant, trop frustrant, je ne l'ai au final pas fait, il aurait fallu à mes camarades d'installer nix, et sans utilier du caching, crane demandait trop souvent de réinstaller les dépendances, ce qui est long! Et même sans les demande d'installation de dépendances, il n'y avait pas le caching usuel fait par {\emph {cargo}} le build system de rust de base, tout était recompiler depuis la source au lieu de compiler une fois, puis utiliser des objets compilé. Ce qui a rendu l'utilisation encore plus lente que normalement. Chaque modification prenait des minutes, ce qui tue assez rapidement toutes joies ou volonté de programmer, donc l'utilisation de nix a été abandonné, avec lui, les perspectives d'utiliser SDL2.
+
+Nous avons tous de notre côté ensuite essayer de faire marche bery ou wgpu, mais bevy utilise un modèle assez spéciale, {\emph ECS} (Entity Component System) qui paraîssait pas très naturel et n'était pas le but de ce projet, et wgpu était trop bas niveau.
+
+Ce fut trop, on n'avancait pas, malgrè les qualités techniques, si on ne peut pas intéragir rapidement avec notre projet, il est plus difficile d'expérimenter, voir ce qui marche, etc., le choix était plus nuancé que prévu, nous avons donc abandonné rust pour avoir quelque chose qui règlait notre plus grand problème, le graphique, ainsi nous avons utilisé Unity ensuite.
+
+\subsection{Post-Rust : Unity}
 TODO
 
 \section{Conclusion}

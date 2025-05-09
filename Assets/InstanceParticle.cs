@@ -453,12 +453,8 @@ public class FluidSimulator : MonoBehaviour
         float dst = Mathf.Sqrt(sqrDst);
         
         if(dst < radius){
-            Debug.Log(dst);
-            Debug.Log("\n");
-            Debug.Log(offset.x);
-            Debug.Log(offset.y);
             
-            Vector2 dirtoinputpoint = dst <= 0.001f ? Vector2.zero : offset / dst;
+            Vector2 dirtoinputpoint = dst <= 0.01f ? Vector2.zero : offset / dst;
             
             float centreT = 1 - dst / radius;
             InteractionForce += (dirtoinputpoint * strenght -velocities[particleIndex])* centreT;

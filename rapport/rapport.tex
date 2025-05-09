@@ -1,11 +1,21 @@
 \documentclass{article}
-\usepackage[french]{babel}
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage{physics}
+
+\usepackage[paperheight=16cm,paperwidth=14cm,textwidth=12cm]{geometry}
+\usepackage{parskip}
+\linespread{0.8} % si c'est trop proche, personnellement je peux me perdre dans les lignes
+\setlength{\parskip}{15pt plus2pt} % si j'écris en paragraphe, je veux qu'on puisse voir ces paragraphes
+\usepackage[french]{babel}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+
+
+\SetKwInput{KwInput}{Entrée}
+\SetKwInput{KwOutput}{Sortie}
+
 
 \author{Stephane LEJEUNE, Jacques PHAM BA NIEN} % ajouter vos prénoms/noms
 \title{Projet de Simulateur de Fluide}
@@ -32,7 +42,7 @@ Nous sommes donc reconnaissant que notre proposition de projet ait été accept�
 L'objectif du projet est double:
 \begin{enumerate}
     \item Implémenter une simulation de fluide stable, visuellement cohérente, et intéractive, capable de gérer plusieurs centaintes, voire mileirs de particules.
-    \item Intégrer cette simulation dans un moteur de jeu 2D, en l'occurrence, {\emph Unity}, pour permettre une visualisation en temps réel avec un contrôle sur les paramètres physiques.
+    \item Intégrer cette simulation dans un moteur de jeu 2D, en l'occurrence, {\emph {Unity}}, pour permettre une visualisation en temps réel avec un contrôle sur les paramètres physiques.
 \end{enumerate}
 
 Durant le développement, de nombreux défis ont été rencontrés: gestion des densités divergentes, explosions numériques liées à une mauvaise évaluation de la pression, instabilités aux frontières, ou encore des performances non optimales à partir d'un certain nombre de particules. Plusieurs améliorations progressives ont été apportés, incluant l'ajout d'une grille spatiale, la prédiction de position, un modèle de pression stable (Tait), et une modélisation simplifiée de la viscosité.
@@ -66,7 +76,8 @@ L'équation de moments est plus complexe, elle décrit les forces locales qui so
 
 \begin{itemize}
     \item \(\rho\) est la densité (locale, mais cela n'importe peu pour la suite) de notre fluide, donc c'est la masse divisé par le volume autour d'un point.
-    \item \(\vec{F}\) est la force externe exercé sur notre fluide, ici c'est juste la gravité. La force exercé par la gravité localement est \(\vec{g} \frac{m}{V}\) où \(\vec{g}\) est la force gravitationnel universelle, \(m\) est la masse et \(V\) est le volume. Autrement dit, \(\vec{F} = \rho\vec{g}\).
+    \item \(\vec{F}\) est la force externe exercé sur notre fluide, ici c'est juste la gravité. La force exercé par la gravité localement est \(\vec{g} \frac{m}{V}\) où \(\vec{g}\) est la force gravitationnel universelle, \(m\) est la masse et \(V\) est le volume. Autrement dit: 
+        \[\vec{F} = \rho\vec{g}\].
     \item \(\vec{V}\) est le champ vectoriel de la vitesse du fluide. Champ vectoriel car en tout point, le vecteur direction peut être différent.
     \item \(p\) est la pression du fluide.
     \item \(\mu\) est une constante propre au fluide étudié, cela modèle la viscosité, plus elle est grande, plus le fluide est visqueux, ce terme limite l'accélaration.
@@ -97,7 +108,7 @@ Certes maintenant on a ``comment les fluides doivent agir'', on n'a pas ``commen
 
 Pour observer la vie réel, cela n'a pas d'importance, pour un mathématicien non plus, mais un ordinateur de peut pas gérer des équations différentiels de manière exactes sur un volume continu, il y aurait juste beaucoup trop de données à stoquer et de calcul à faire (même, une infinité non dénombrable, d'où cette incapacité).
 
-Ainsi, on est obliger de simplifier notre tache, au lieu d'obtenir un système agissant {\emph exactement} comme un fluide idéal, il faut faire un système qui agit {\emph approximativement} comme un fluide idéal, les physiciens font déjà cela pour simplifier les calculs (nous ne faisons pas en général de la théories des probabilités et des équations depuis le quantique pour des fluides, car il y aurait trop de termes agissant entre eux, obscursissant les calculs, et même pourrait rendre des équations insolvables de manière numériques), en informatique, nous allons passer du continu au discret, perdant ainsi de la précision pour en échange, avoir de la possibilité et de la vitesse de calcul.
+Ainsi, on est obliger de simplifier notre tache, au lieu d'obtenir un système agissant {\emph {exactement}} comme un fluide idéal, il faut faire un système qui agit {\emph {approximativement}} comme un fluide idéal, les physiciens font déjà cela pour simplifier les calculs (nous ne faisons pas en général de la théories des probabilités et des équations depuis le quantique pour des fluides, car il y aurait trop de termes agissant entre eux, obscursissant les calculs, et même pourrait rendre des équations insolvables de manière numériques), en informatique, nous allons passer du continu au discret, perdant ainsi de la précision pour en échange, avoir de la possibilité et de la vitesse de calcul.
 
 Il y a plusieurs manières de discrétiser notre problème:
 
@@ -111,28 +122,74 @@ Nous avons seulement besoin de modéliser le passage de fluide d'une boîte à s
 
 Ainsi, une optimisation est de sauvegarder les magnitudes de ces flux au lieu de la magnitude et direction du flux partant du centre de la boîte.
 
-En pseudocode, 
+En pseudocode, le calcul du flux ressemble à ça:
 
-TODO
+\begin{algorithm}
+    \caption{Simulation de Newton}
+\KwInput{grille}
+\KwOutput{Même grille}
+\For{boîte dans grille} {
+    Ajout flux de boîte à la boîte en dessous\;
+}
+Mettre\_pression\_à\_zero(grille)\;
+\end{algorithm}
+
+Pour fixer la pression (faire que le flux en entré et en sortie de toutes boîtes est à 0), une approche (Gauss-Seidel) est de fixer la pression  de chaque boîte un par un, cela va defixer nos boîte fixé auparavent, mais en répétant cette opération, on converge vers la bonne solution (car la matrice associé à une diagonale dominante, mais ici la démonstration importe peu).
+
+Appelons \(s(i, j)\) la ``facilité'' à pousser le flux de \(i\) vers \(j\) (par exemple, peut être mis à 0 pour représenter que \(j\) est un mur, permet aussi de mettre en contacte des fluides plus dense, etc.), on peut alors faire:
+
+\begin{algorithm}
+    \caption{Mettre pression à zero Newton}
+    \KwInput{grille, nombreÉtapes et \(s\)}
+    \KwOutput{Même grille}
+    étape = 0 \;
+    \While{étape < nombreÉtapes}{
+        \For{boîte dans grille} {
+            d = 0 \;
+            flux = 0 \;
+            \For{voisin dans voisins de boîte} {
+                d = d + s(boîte, voisin) \;
+                flux = flux + flux\_entre(boîte, voisin) * s(boîte, voisin)\;
+            }
+            \For{voisin dans voisins de boîte} {
+                flux\_entre(boîte, voisin) -= flux * s(boîte, voisin) / d \;
+            }
+        }
+    }
+\end{algorithm}
+
+Pour des raisons de performances, si il n'y a pas beaucoup de flux, il est également possible de mettre plusieurs boîte ensembles, de manière à ne plus avoir de grille, et se focaliser sur les endroits où il y a le plus d'actions (ce sont les endroits les plus important niveau comportement), il faudra alors changer le \(s\), une autre raison pour laquel avoir \(s\) est pratique.
 
 \subsubsection{Simulateur Lagrangien}
-Une autre approche est  de discretiser notre problème en une manière plus intuitive, en simulant nos {\emph particules} d'eaux, néanmoins, dans un fluide usuel, il y a beaucoup trop de particules, donc à la place, on va simuler des très grosses particules, ce qui est absurde physiquement mais marche relativement bien.
 
-TODO
+Une autre approche est  de discretiser notre problème en une manière plus intuitive, en simulant nos {\emph {particules}} d'eaux, néanmoins, dans un fluide usuel, il y a beaucoup trop de particules, donc à la place, on va simuler des très grosses particules, ce qui est absurde physiquement mais marche relativement bien.
+
+L'approche Lagrangienne permet de ne pas avoir à considerer que tout notre environement est dans un fluide, par exemple ne pas avoir à considerer à la foix l'eau {\emph {et}} l'air qui l'alentour.
+
+Cette approche est plus proche de comment on intuitionne les fluides, mais plus loins du calcul mathématique que nous avons dérivé, il faut donc travailler avec des calcules plus complexe pour obtenir des valeurs tel que la vitesse, la température ou même la pression, ce problème de pression impacte de manière directe les performances, car on a généralement besoin de cette valeur pour simuler un fluide (à moins qu'on ait un grain très fin, alors les collisions entre particules génèrent d'elles même avec haute probabilités, des intéractions faisant penser à celle de la densité, en effet, un ``fluide'' n'est qu'un amas de beaucoup de particules intéragissant localement entre elles, notre comportement idéal n'est que le résultat probabiliste moyen que ces intéractions créent à grande échelle, sujet étudier en Physique Statistique).
+
+Les soucis d'implémentation d'une méthode Lagrangienne sera expliquer plus tard (le simulateur SPH (Smoothed Paricle Hydrodynamics)) en détail, nous laissons donc cette sous section sans.
+
+Néanmoins, ce qu'une approche Lagrangienne permet de faire, est de prendre un simulateur physique d'intéraction de corps usuel, et directement avoir nos fluides ``gratuitement''.
+
+Cela permet aussi de l'étendre plus facilement, en effet, nous avons déjà l'intéraction entre petites particules, avec moins d'effort qu'avec une méthode Eulerienne, nous pouvons rajouter l'interaction de ces particules sur des objets de grande tailles.
+
 \subsubsection{Simulateur Mixtes}
 
-TODO
+Tout comme vous avez pus le remarquer, les approches Newtoniennes et Lagrangiennes sont très différentes, et ont des bénéfices et des inconvénients.
 
-\subsubsection{Comparaison des approches}
-TODO
-\subsubsection{Simulateur SPH}
+Ce qui laisse la possibilité de mixer ces deux approches pour essayer de combler les inconvénients de chaques méthodes par l'autre.
+
+Néanmoins, cette approche demande de gros efforts d'implémentation, beaucoup de test car il y a beaucoup plus de facteurs mouvants dans le système, pour des effets sur la performances qu'on peut obtenir en choississant un système et l'optimisation bien avec le même effort (mais un système mixte et optimisé pourrait être plus rapide).
+
+\subsubsection{Simulateur SPH (Smoothed Paricle Hydrodynamics)}
 C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord pencher sur une approche Newtonienne, mais TODO
 TODO
 
 \section{Le projet}
-\subsection{Pre-unity: le choix de rust}
+\subsection{Pre-Unity: le choix de rust}
 TODO
-\subsection{Post-unity: l'abandon de rust}
+\subsection{Post-Unity: l'abandon de rust}
 TODO
 
 \section{Conclusion}

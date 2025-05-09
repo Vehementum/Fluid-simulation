@@ -15,7 +15,7 @@ public class FluidSimulator : MonoBehaviour
     private Particle[] particles; // Array to hold all particles
     [Range(10, 10000)] public int particleCount = 10;
     [Range(0.1f, 5f)] public float particleSpacing = 0.2f;
-    [Range(0.1f, 5f)] public float particleSize = 0.5f;
+    [Range(0.1f, 5f)] public float particleSize = 0.1f;
     public Vector2 boundsSize = new Vector2(10f, 8f);
     public GameObject particlePrefab; // Assign in Inspector
     public Vector2[] positions;
@@ -35,6 +35,21 @@ public class FluidSimulator : MonoBehaviour
     Dictionary<Vector2Int, List<int>> spatialGrid;
     float cellSize;
 
+    bool isPaused;
+
+    Vector3 mousePos=Vector3.zero;
+    bool isPullInteraction;
+    bool isPushInteraction;
+
+    public float interactionInputStrength;
+    public float rayoninterraction;
+
+    
+    
+    float currInteractStrength = 0;
+    
+
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Start()
     {
@@ -75,6 +90,7 @@ public class FluidSimulator : MonoBehaviour
             
             // Initialize the Particle struct
             particles[i] = new Particle { position = randomPosition, velocity = Vector2.zero };
+            
             positions[i] = randomPosition;
             PredictedPositions[i] = positions[i];
             velocities[i] = particles[i].velocity;
@@ -82,7 +98,9 @@ public class FluidSimulator : MonoBehaviour
 
             // Instantiate the prefab and get its ParticleComponent
             GameObject particle = Instantiate(particlePrefab, new Vector3(randomPosition.x, randomPosition.y, 0f), Quaternion.identity);
+            particle.transform.localScale = new Vector3(particleSize, particleSize, particleSize);
             ParticleComponent particleComponent = particle.GetComponent<ParticleComponent>();
+            
 
             // Assign the Particle struct to the component
             particleComponent.particleData = particles[i];
@@ -98,8 +116,14 @@ public class FluidSimulator : MonoBehaviour
     void Update()
     {
         // Basic_update(); // Call the basic update function
-        SimulationStep(Time.deltaTime); // Call the simulation step function
+        if(!isPaused){
+            SimulationStep(Time.deltaTime); // Call the simulation step function
+        }
+        HandleInput();
+        
+        
     }
+
 
     void Basic_update()
     {
@@ -129,16 +153,16 @@ public class FluidSimulator : MonoBehaviour
         Vector2 halfBoundSize = boundsSize / 2;
 
         // Check for X bound collision
-        if (Mathf.Abs(position.x) > halfBoundSize.x - particleSize)
+        if (Mathf.Abs(position.x) > halfBoundSize.x - particleSize/10)
         {
-            position.x = (halfBoundSize.x - particleSize) * Mathf.Sign(position.x);
+            position.x = (halfBoundSize.x - particleSize/10) * Mathf.Sign(position.x);
             velocity.x *= -1f * Dampening_factor; // Reverse velocity on collision
         }
 
         // Check for Y bound collision
-        if (Mathf.Abs(position.y) > halfBoundSize.y - particleSize)
+        if (Mathf.Abs(position.y) > halfBoundSize.y - particleSize/10)
         {
-            position.y = (halfBoundSize.y - particleSize) * Mathf.Sign(position.y);
+            position.y = (halfBoundSize.y - particleSize/10) * Mathf.Sign(position.y);
             velocity.y *= -1f * Dampening_factor; // Reverse velocity on collision
         }
     }
@@ -187,7 +211,7 @@ public class FluidSimulator : MonoBehaviour
     float CalculatePredictedDensity(Vector2 samplePoint)
     {
        float density = 0f;
-       const float mass = 1;
+       const float mass = 1f;
 
        // Iterate through all particles to calculate density at the sample point
         foreach (int i in GetNeighbors(samplePoint))
@@ -306,7 +330,23 @@ public class FluidSimulator : MonoBehaviour
         for(int i = 0; i < particleCount; i++)
         {
             velocities[i] +=Vector2.down * gravity * deltaTime; // Apply gravity to velocity
-            PredictedPositions[i] = positions[i] + velocities[i] * deltaTime; // Predict new position
+             // Predict new position
+            
+            isPullInteraction = Input.GetMouseButton(0);
+            isPushInteraction = Input.GetMouseButton(1);
+            if (isPushInteraction || isPullInteraction)
+                {
+                    Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                    
+                    currInteractStrength = isPushInteraction ? -interactionInputStrength : interactionInputStrength;
+                    velocities[i]+=InteractionForce(mousePos, rayoninterraction, currInteractStrength, i);
+                    
+                    
+                    
+                }
+
+            PredictedPositions[i] = positions[i] + velocities[i] * 1/120f;
+            ResolveCollisions(ref PredictedPositions[i], ref velocities[i]);
         }
         
         UpdateSpatialGrid();
@@ -321,6 +361,8 @@ public class FluidSimulator : MonoBehaviour
             Vector2 pressureAcceleration = pressureForce / densities[i]; // Calculate acceleration from pressure force
             velocities[i] += (pressureAcceleration + viscosityForce) * deltaTime; // Update velocity based on pressure acceleration
         }
+
+
         for(int i = 0; i < particleCount; i++){
             positions[i] += velocities[i] * deltaTime; // Update position based on velocity
             ResolveCollisions(ref positions[i], ref velocities[i]); // Resolve collisions with bounds
@@ -402,4 +444,57 @@ public class FluidSimulator : MonoBehaviour
         float pressureB = ConvertDensityToPressure2(densityB);
         return (pressureA + pressureB) / 2f;
     }
+
+    Vector2 InteractionForce(Vector2 input, float radius, float strenght, int particleIndex){
+        Vector2 InteractionForce = Vector2.zero;
+        Vector2 offset = input - positions[particleIndex];
+
+        float sqrDst = offset.x*offset.x + offset.y*offset.y;
+        float dst = Mathf.Sqrt(sqrDst);
+        
+        if(dst < radius){
+            Debug.Log(dst);
+            Debug.Log("\n");
+            Debug.Log(offset.x);
+            Debug.Log(offset.y);
+            
+            Vector2 dirtoinputpoint = dst <= 0.001f ? Vector2.zero : offset / dst;
+            
+            float centreT = 1 - dst / radius;
+            InteractionForce += (dirtoinputpoint * strenght -velocities[particleIndex])* centreT;
+        }
+        return InteractionForce;
+    }
+    
+    
+    
+    
+    
+    void HandleInput()
+		{
+			if (Input.GetKeyDown(KeyCode.Space))
+			{
+				isPaused = !isPaused;
+			}
+            if (Input.GetMouseButton(0)){
+               
+            }
+        }
+
+    // void OnDrawGizmos()
+    // {
+    //     if (!isPaused)
+    //     {
+    //         Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+    //         bool isPullInteraction = Input.GetMouseButton(0);
+    //         bool isPushInteraction = Input.GetMouseButton(1);
+    //         bool isInteracting = isPullInteraction || isPushInteraction;
+    //         if (isInteracting)
+    //         {
+    //             Gizmos.color = isPullInteraction ? Color.green : Color.red;
+    //             Gizmos.DrawWireSphere(mousePos, 1);
+    //         }
+    //     }
+    // }
+    
 }

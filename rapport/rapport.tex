@@ -403,6 +403,119 @@ Les constantes suivantes sont exposées dans l’éditeur pour permettre des exp
 
 Le simulateur est capable de gérer jusqu'à {\emph {1000 particules}} à environ {\emph {100-120 FPS}} sans multithreading ni calcul GPU. L'utilisaion d'une grille spatiale et la simplification des formules mathématiques permettent une exécution acceptable sur le CPU.
 
+Des optimisations sont possibles (section suivante) pour un déploiement plus large.
+
+\subsubsection{Difficultés rencontrées et optimisations}
+
+Tout ne s'est pas directement passer sans accroc directement.
+
+\paragraph{Problèmes initiaux et de stabilités}
+
+Au départ, la simulation souffrait de comportement instables:
+
+\begin{itemize}
+    \item Les particules explosaient sous pression à proximité des bords
+    \item Des vitesses deenaient infinies ou NaN
+    \item L'écoulement ne ressemblait pas à une fluide mais à un gaz chaotique.
+\end{itemize}
+
+Ces symptômes ont été causés par:
+
+\begin{itemize}
+    \item Une mauvaise gestion des densités proches de zéro (division par zéro)
+    \item Une mauvaise évaluation des gradients de pression
+    \item Des paramètres physiques mal calibrés (rayon de lissage, pression, densité cible)
+\end{itemize}
+
+Corrections apportées:
+
+\begin{itemize}
+    \item Clamp des distances trop petites pour éviter les divisions par zéro
+    \item Vérification de la validité des valeurs physiques à chaque étape
+    \item Introduction d’un terme de viscosité artificielle.
+\end{itemize}
+
+\paragraph{Implémentation de la prédiction}
+
+Pour améliorer la stabilité, un schéma de prédiction a été introduit :
+
+\begin{itemize}
+    \item Calcul des positions futures à partir de la vitesse (PredictedPositions)
+    \item Calcul des densités et forces à partir de ces positions anticipées.
+\end{itemize}
+
+Cela permet de mieux évaluer les interactions futures et limite les accélérations irréalistes.
+
+\paragraph{Problèmes liés aux collisions}
+
+Un comportement problématique est apparu lorsque des particules se massaient contre un bord : elles accumulaient de la pression jusqu’à ``exploser''.
+
+Solution:
+
+\begin{itemize}
+    \item Implémentaiton d'un rebond amorti dans ResolveCollisions
+    \item Ajout d'une légère absorption de l'énergie à chaque impact
+\end{itemize}
+
+Cela a permis de dissiper les pics de presion localisés.
+
+\paragraph{Optimisation par grille spaiale}
+
+Sans grille, le calcul du voisinage est en \(O(n^2)\). À 1000 particules, cela devient inutilisable. L’introduction d’une grille spatiale 2D a permis de:
+
+\begin{itemize}
+    \item Réduire drastiquement le coût de calcul des voisins
+    \item Maintenir un voisinage local et pertinent (9 cellules voisines max)
+    \item Garder une simulation interactive
+\end{itemize}
+
+Chaque cellule a une taille égale au rayon de lissage \(h\), garantissant que toutes les particules influentes sont proches.
+
+\paragraph{Séparation des responsabilités}
+
+L’erreur de conception initiale était de lier directement les Transform Unity aux calculs physiques. Cela a été remplacé par:
+
+\begin{itemize}
+    \item Une structure de données physique (positions, velocities, etc.)
+    \item Une mise à jour des GameObjects après le calcul physique
+\end{itemize}
+
+Cette séparation a permis d'éviter les confusions de coordonnées et de mieux contrôler la logique du moteur physique.
+
+\paragraph{Ajustements empiriques des constantes}
+
+Les valeurs suivantes ont nécessité de nombreux tests pour trouver un équilibre :
+
+\begin{itemize}
+    \item smoothingRadius : trop petit = comportement granulaire, trop grand = simulation molle et lente.
+    \item pressureCoefficient : trop fort = explosion, trop faible = fluide mou.
+    \item targetDensity : trop bas = fluide instable, trop haut = fluide immobile.
+    \item viscosity : essentiel pour empêcher les oscillations chaotiques.
+\end{itemize}
+
+\paragraph{Ajout de l'équation de Tait}
+
+Plutôt que d’utiliser une pression linéaire \(P = k(ρ - ρ\_0)\), une formulation non linéaire via l’équation de Tait a été introduite (voir plus haut).
+
+Donnant un comportement plus incompressible au fluide et stabilise la simulation sous forte pression.
+
+\paragraph{Problèmes de performance}
+
+À 1000 particules, la simulation tourne autour de 80 FPS sur CPU seul. Les points limitants sont :
+
+\begin{itemize}
+    \item Le recalcul des densités (même optimisé par grille)
+    \item nombre élevé dde paricules à mettre à jour visuellement
+\end{itemize}
+
+Des optimisation envisageables:
+
+\begin{itemize}
+    \item Passage en Jobs System + Burst pour paralléliser
+    \item Remplacement des GameObjects par un DrawMeshInstanced ou ComputeShader
+    \item Réduction de la fréquence de mise à jour visuelle
+\end{itemize}
+
 \section{Conclusion}
 
 TODO

@@ -18,5 +18,8 @@ MemoryCaptures/
 *.idea/
 .vscode/
 rapport/rapport.aux
-rapport/rappor.log
-rapport/rappor.toc
+rapport/rapport.log
+rapport/rapport.toc
+rapport/rapport.out
+rapport/rapport.out
+rapport/textput.log

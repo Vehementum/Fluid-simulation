@@ -3,6 +3,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
 \usepackage{physics}
 
 \author{Stephane LEJEUNE, Jacques PHAM BA NIEN} % ajouter vos prénoms/noms
@@ -26,6 +28,16 @@ Ce projet, nous permet d'explorer comment les techniques qu'on as appris durant 
 Du point de vu informatique, ce projet nous oblige à interagir avec une interface graphique, choisir nos structures pour representer les particules (ou ne pas les representer)
 
 Nous sommes donc reconnaissant que notre proposition de projet ait été accepté.
+
+L'objectif du projet est double:
+\begin{enumerate}
+    \item Implémenter une simulation de fluide stable, visuellement cohérente, et intéractive, capable de gérer plusieurs centaintes, voire mileirs de particules.
+    \item Intégrer cette simulation dans un moteur de jeu 2D, en l'occurrence, {\emph Unity}, pour permettre une visualisation en temps réel avec un contrôle sur les paramètres physiques.
+\end{enumerate}
+
+Durant le développement, de nombreux défis ont été rencontrés: gestion des densités divergentes, explosions numériques liées à une mauvaise évaluation de la pression, instabilités aux frontières, ou encore des performances non optimales à partir d'un certain nombre de particules. Plusieurs améliorations progressives ont été apportés, incluant l'ajout d'une grille spatiale, la prédiction de position, un modèle de pression stable (Tait), et une modélisation simplifiée de la viscosité.
+
+Ce rapport détaille les fondements physiques du modèles SPH, la manière dont il a été implémenté,optimisé et visualié dans Unity, ansi que les résultats obtenus, leurs limites et des pistes d'améliorations futures.
 
 \section{Théorie de simulateur de fluide}
 \subsection{Equation de Navier-Stokes}
@@ -62,7 +74,7 @@ L'équation de moments est plus complexe, elle décrit les forces locales qui so
 
 Cette équation nous dit donc que le changement de vitesse locale est du aux forces extérieurs, et à la différences de vitesse environnantes, en évitant de trop se compresser, et n'accélérant pas trop vite proportionnelement à la constante de viscosité.
 
-Tout du long, nous allons simplifier notre fluide étudier, en général, les fluides dont on s'intéresse (surtout l'eau) ne sont pas visqueux, et aussi (quasiment) incompréssible, cela simplifie nos équations, ce qui rends la simulation plus simple et plus rapide, nos nouvelles équations:
+Tout du long, nous allons simplifier notre fluide étudier, en général, les fluides dont on s'intéresse (surtout l'eau) ne sont pas visqueux (nous rajouterons la viscosité plus tard pour des raisons de précision numériques, mais ignorons ce paramètre pour l'instant), et aussi (quasiment) incompréssible, cela simplifie nos équations, ce qui rends la simulation plus simple et plus rapide, nos nouvelles équations:
 
 \begin{itemize}
     \item Conservation:
@@ -91,7 +103,16 @@ Il y a plusieurs manières de discrétiser notre problème:
 
 \subsubsection{Simulateur Newtonien}
 
-On peut discretiser notre problème en considérant d'avoir une grille de vecteurs au lieu d'un champs. 
+On peut discretiser notre problème en considérant d'avoir une grille de vecteurs au lieu d'un champs, nous appellons chaques éléménts de la grille une ``boîte'' pour des raisons de facilité de visualisation.
+
+Ainsi, il faut modeler la quantité de fluide passant d'une boîte à ses boites voisinnes.
+
+Nous avons seulement besoin de modéliser le passage de fluide d'une boîte à ses voisinnes directes dans les directions de gauche, droite, haut et bas, pas besoin des diagonales.
+
+Ainsi, une optimisation est de sauvegarder les magnitudes de ces flux au lieu de la magnitude et direction du flux partant du centre de la boîte.
+
+En pseudocode, 
+
 TODO
 
 \subsubsection{Simulateur Lagrangien}
@@ -103,6 +124,9 @@ TODO
 TODO
 
 \subsubsection{Comparaison des approches}
+TODO
+\subsubsection{Simulateur SPH}
+C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord pencher sur une approche Newtonienne, mais TODO
 TODO
 
 \section{Le projet}

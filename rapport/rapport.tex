@@ -360,9 +360,9 @@ Chaque frame effectue les étapes suivantes:
 
 \paragraph{Grille spatiale}
 
-Afin de limiter la complexité du voisinage à \(O(n)O(n)O(n)\) plutôt que \(O(n^2)O(n^2)O(n^2)\), une grille spatiale 2D est utilisée. Les particules sont associées à des cellules de taille égale au rayon de lissage \(h\). Chaque cellule contient une liste d’indices de particules.
+Afin de limiter la complexité du voisinage à \(O(n)\) plutôt que \(O(n^2)\), une grille spatiale 2D est utilisée. Les particules sont associées à des cellules de taille égale au rayon de lissage \(h\). Chaque cellule contient une liste d’indices de particules.
 
-Lors du calcul des interactions, seules les cellules voisines \(3×33 \times 33×3\) sont parcourues, ce qui améliore significativement les performances.
+Lors du calcul des interactions, seules les cellules voisines \(3×33 times 33×3\) sont parcourues, ce qui améliore significativement les performances.
 
 \paragraph{Résolution des collisions}
 
@@ -705,4 +705,65 @@ Le comportement du fluide, bien qu’encore éloigné d’un modèle réaliste c
 \item \url{https://www.youtube.com/watch?v=XtQMytORBmM}
 \end{itemize}
 
+\section{Annexe}
+\subsection{Cahier des charges}
+\subsubsection{Objectifs du projet}
+Ce projet a pour objectif la mise en œuvre d’une simulation de fluide basée sur la méthode des particules, en utilisant le moteur de jeu Unity. Il s’agit de reproduire un comportement fluide réaliste en temps réel, en s’inspirant des principes de la mécanique des fluides et de la méthode SPH (Smoothed Particle Hydrodynamics). L’accent est mis sur la simulation de liquides (et non de gaz), la visualisation du comportement des particules, et la stabilité numérique du système.
+\subsubsection{Description du système simulé}
+\begin{itemize}
+
+\item Fluide modélisé par particules : Chaque particule représente une portion infinitésimale de fluide. Leur comportement global émerge à partir des interactions locales calculées entre particules voisines.
+\item Forces implémentées : Gravité, pression (modèle de Tait), viscosité, et collisions avec les bordures.
+\item Grille spatiale : Pour optimiser les recherches de voisinage entre particules dans un rayon donné (smoothing radius).
+\item Visualisation : Chaque particule est représentée par un GameObject dans Unity, permettant une visualisation en temps réel de la simulation.
+\end{itemize}
+
+\subsubsection{Fonctionnalités de la simulation}
+
+\begin{itemize}
+\item Répartition initiale des particules en grille régulière.
+\item Calcul des densités et pressions à chaque pas de temps.
+\item Application de la prédiction de position avant évaluation des forces.
+\item Collision avec les bords simulée avec amortissement.
+\item Visualisation en temps réel dans Unity.
+\item Affichage optionnel du FPS pour mesurer la performance.
+\end{itemize}
+
+\subsubsection{Interface utilisateur}
+
+L’interface graphique est rudimentaire mais fonctionnelle. Chaque particule est instanciée comme un GameObject Unity, et son état (position, vitesse) est mis à jour visuellement à chaque frame. Les contrôles de base permettent de démarrer la simulation, ajuster les constantes physiques dans le code (gravité, pression, densité cible, etc.), et observer visuellement l’effet de ces variations.
+
+
+\subsection{Réglages et constantes physiques}
+\subsubsection{Paramètres expérimentaux utilisés}
+
+\begin{itemize}
+\item Smoothing radius : entre 0.5 et 1.5 unités Unity
+\item Densité cible : autour de 1000 (unité arbitraire)
+\item Coefficient de pression : entre 200 et 800 pour la stabilité
+\item Viscosité : faible mais non négligeable pour la stabilité
+\item Gravité : 9.81 m/s\(^2\) dans l’axe vertical
+\item Taille du domaine : boîte rectangulaire, typiquement 20×1620 unités
+\item Nombre de particules : 500 à 1500 selon les performances
+\item Facteur d’amortissement des collisions : 0.5 à 0.9
+\end{itemize}
+
+
+\subsection{Problèmes rencontrés et solutions}
+\subsubsection{Instabilités}
+Des explosions de particules ont été observées près des bords en cas de densité trop élevée ou de pas de temps mal calibré. La prédiction de position a permis de lisser les calculs de pression.
+\subsubsection{Performance}
+Le système devient très lent au-delà de 1000 particules. L’usage de grilles spatiales a permis de réduire la complexité des interactions de \(O(n^2)\) à \(O(n)\) dans les cas typiques.
+\subsubsection{Pression négative}
+Une mauvaise calibration de la densité cible ou du coefficient de pression entraînait des forces de pression irréalistes. La mise en œuvre de l’équation de Tait avec une borne inférieure sur la pression a résolu ce problème.
+
+\subsection{Prolongements possibles}
+\begin{itemize}
+\item Implémentation d’un solveur de contraintes (PCISPH, PBF)
+\item Ajout d’un conteneur mobile ou de frontières déformables
+\item Passage à la 3D avec visualisation volumique
+\item Couplage avec un solver thermique pour simuler les changements de phase
+\item Basculement des calculs sur le GPU
+\item Utilisation de shaders pour le visuel
+\end{itemize}
 \end{document}

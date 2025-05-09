@@ -7,9 +7,9 @@
 \usepackage{physics}
 
 \usepackage[paperheight=16cm,paperwidth=14cm,textwidth=12cm]{geometry}
-\usepackage{parskip}
-\linespread{0.8} % si c'est trop proche, personnellement je peux me perdre dans les lignes
-\setlength{\parskip}{15pt plus2pt} % si j'écris en paragraphe, je veux qu'on puisse voir ces paragraphes
+% \usepackage{parskip}
+% \linespread{0.8} % si c'est trop proche, personnellement je peux me perdre dans les lignes
+% \setlength{\parskip}{15pt plus2pt} % si j'écris en paragraphe, je veux qu'on puisse voir ces paragraphes
 
 \usepackage[french]{babel}
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
@@ -516,8 +516,92 @@ Des optimisation envisageables:
     \item Réduction de la fréquence de mise à jour visuelle
 \end{itemize}
 
+\subsubsection{Visualisation et résultas expérimentaux}
+
+\paragraph{Mise en place de la visualisation}
+
+Chaque particule est représentée par un GameObject Unity contenant :
+
+\begin{itemize}
+    \item Un SpriteRenderer pour l'affichage visuel
+    \item Un composant ParticleComponent pour stocker les données physiques (position, vitesse, pression, densité)
+    \item Une couleur statique ou dynamique (gradient de pression ou densité)
+\end{itemize}
+
+Une boîte englobante (bounding box) a été ajoutée avec un LineRenderer, rendant les limites visibles pendant l'exécution. Son objectif est double :
+
+\begin{itemize}
+    \item Encadrer l’espace simulé
+    \item Servir de référence visuelle aux collisions
+\end{itemize}
+
+Un affichage du framerate a été intégré à l’aide de GUI.Label dans OnGUI() afin de suivre les performances en temps réel.
+
+\paragraph{ Expérimentations avec différents paramètres}
+
+Nombres de particules: Des tests ont été réalisés pour plusieurs valeurs:
+
+\begin{itemize}
+    \item 100 particules : fluide trop dispersé, peu cohérent visuellement,
+    \item 300–500 particules : forme des jets visible, comportement liquide partiel,
+    \item 1000 particules : comportement réaliste, mais chutes de performance perceptibles.
+\end{itemize}
+
+Rayon de lissage:
+
+Une valeur trop faible donne un comportement granulaire (faible interaction), tandis qu’un rayon trop large lisse trop les détails. Une valeur équilibrée autour de 0.5–0.8 unités donne de bons résultats.
+
+Densité cible et pression:
+
+Lorsque la densité cible est trop faible, les particules s'effondrent. Si elle est trop élevée, elles restent rigides et ne se déplacent plus. La pression (via le coefficient ou l’équation de Tait) a été ajustée empiriquement pour assurer une compression minimale et éviter les explosions.
+
+Viscosié:
+
+L'ajout de viscosité a permis d'éviter les oscillations trop fortes et d’ajouter un comportement réaliste dans les courants.
+
+\paragraph{Cas de test visuels}
+
+Écoulement libre: Un ensemble de particules est relâché dans la boîte sans obstacle. Résultat:
+
+\begin{itemize}
+\item Chute rapide sous gravité,
+\item Formation de vagues lors du contact avec le sol,
+\item Distribution progressive de l'énergie, arrêt quasi stable au bout de quelques secondes.
+\end{itemize}
+
+Fluide dans un récipient:
+
+Les particules sont initialisées dans une zone restreinte. Elles remplissent progressivement la boîte jusqu’à atteindre une forme semi-stable, rappelant un liquide dans un récipient.
+
+
+Compression dans un coin : Des particules sont poussées dans un coin via une initialisation biaisée. Résultat :
+
+\begin{itemize}
+\item Augmentation locale de la pression,
+\item Répulsion naturelle sous l’effet de la pression partagée,
+\item Retour progressif à une forme uniforme.
+\end{itemize}
+
+Ces cas permettent de valider:
+
+\begin{itemize}
+\item Le bon fonctionnement de la formule de pression,
+\item L’effet correct de la résolution de collision,
+\item La cohérence du modèle SPH implémenté.
+\end{itemize}
+
+\paragraph{Limitations observées}
+
+\begin{itemize}
+\item L’absence de résolution itérative de densité (comme dans Position-Based Fluids) rend la simulation parfois trop compressible,
+\item Le rebond sur les bords est encore un peu sec (non glissant),
+\item Les performances ne sont pas viables à très haute résolution sans optimisation GPU.
+\end{itemize}
+
+
+
 \section{Conclusion}
 
-TODO
+ODO
 
 \end{document}

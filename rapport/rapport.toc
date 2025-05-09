@@ -2,8 +2,9 @@
 \contentsline {section}{\numberline {1}Introduction}{3}{}%
 \contentsline {section}{\numberline {2}Théorie de simulateur de fluide}{3}{}%
 \contentsline {subsection}{\numberline {2.1}Equation de Navier-Stokes}{3}{}%
-\contentsline {subsection}{\numberline {2.2}Simulateur Newtonien}{3}{}%
-\contentsline {subsection}{\numberline {2.3}Simulateur Lagrangien}{3}{}%
-\contentsline {subsection}{\numberline {2.4}Simulateur Mixtes}{3}{}%
-\contentsline {section}{\numberline {3}Le projet}{3}{}%
-\contentsline {section}{\numberline {4}Conclusion}{3}{}%
+\contentsline {subsection}{\numberline {2.2}Simulateurs}{4}{}%
+\contentsline {subsubsection}{\numberline {2.2.1}Simulateur Newtonien}{4}{}%
+\contentsline {subsubsection}{\numberline {2.2.2}Simulateur Lagrangien}{4}{}%
+\contentsline {subsubsection}{\numberline {2.2.3}Simulateur Mixtes}{4}{}%
+\contentsline {section}{\numberline {3}Le projet}{4}{}%
+\contentsline {section}{\numberline {4}Conclusion}{5}{}%

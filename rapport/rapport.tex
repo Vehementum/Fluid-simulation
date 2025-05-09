@@ -1,8 +1,12 @@
 \documentclass{article}
 \usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{physics}
 
 \author{Stephane LEJEUNE, Jacques PHAM BA NIEN} % ajouter vos prénoms/noms
 \title{Projet de Simulateur de Fluide}
+
 
 \begin{document}
 \maketitle
@@ -11,15 +15,75 @@
 \newpage
 
 \section{Introduction}
-TODO
+
+Pour le projet, nous avons choisis de construire un simulateur de fluide, projet non proposé de base, mais c'est un projet que Stephane et Jacques voulaient déjà faire depuis la L2, nous avons donc proposer le projet et il a été accepté.
+
+Étant en double licence, le style de compétences utiles qu'on peut apprendre avec un projet informatique sont différentes, le projet de simulateur de fluide nous a sembler être un bon compromis entre demandant des compétences informatiques et mathématiques. 
+
+Ce projet, nous permet d'explorer comment les techniques qu'on as appris durant différent cours analyse numériques peuvent être utiliser pour quelque chose de plus ``réel'' (et visuel) que résoudre un système linéaire ou des équations différentiels abstraites.
+
+Du point de vu informatique, ce projet nous oblige à interagir avec une interface graphique, choisir nos structures pour representer les particules (ou ne pas les representer)
+
+Nous sommes donc reconnaissant que notre proposition de projet ait été accepté.
+
 \section{Théorie de simulateur de fluide}
 \subsection{Equation de Navier-Stokes}
+Pour comprendre comment un simulateur de fluide marchent, il nous as d'abord fallu comprendre comment un fluide est sensé se comporter.
+
+On as certes un modèle en nous de comment cela fonctionne, on a déjà vu des fluides, mais transmettre cette intuition en instructions est loins d'être facile, cela n'est pas notre travail, c'est celui des physiciens. Nous avons donc regarder à comment les physiciens décrivent les lois que les fluides doivent respecter.
+
+Déjà, un ``fluide'' en physique ne décrit pas seulement le comportement d'un liquide, cela décrit aussi le comportement des gas, leurs comportement sont étudier dans la ``mécanique des fluides''.
+
+Ses lois sont appeler ``équations de Navier-Stokes'':
+
+\begin{enumerate}
+    \item Équation de continuité:
+        \[
+            \grad \cdot \vec{V} = 0
+        \]
+    \item Équation de moments:
+        \[
+            \rho (\pdv{\vec{V}}{t} + \vec{V}\cdot \grad \vec{V}) = - \grad p  + \mu \grad ^ 2 \vec{V} + \vec{F}
+        \]
+\end{enumerate}
+
+L'équation de continuité nous dit que l'énergie mécanique du fluide ne change pas avec le temps (sa dérivé est nulle).
+
+L'équation de moments est plus complexe, elle décrit les forces locales qui sont exercé sur notre fluide, décortiquons ce que veut dire chaque termes:
+
+\begin{itemize}
+    \item \(\rho\) est la densité (locale, mais cela n'importe peu pour la suite) de notre fluide, donc c'est la masse divisé par le volume autour d'un point.
+    \item \(\vec{F}\) est la force externe exercé sur notre fluide, ici c'est juste la gravité. La force exercé par la gravité localement est \(\vec{g} \frac{m}{V}\) où \(\vec{g}\) est la force gravitationnel universelle, \(m\) est la masse et \(V\) est le volume. Autrement dit, \(\vec{F} = \rho\vec{g}\).
+    \item \(\vec{V}\) est le champ vectoriel de la vitesse du fluide. Champ vectoriel car en tout point, le vecteur direction peut être différent.
+    \item \(p\) est la pression du fluide.
+    \item \(\mu\) est une constante propre au fluide étudié, cela modèle la viscosité, plus elle est grande, plus le fluide est visqueux, ce terme limite l'accélaration.
+\end{itemize}
+
+Cette équation nous dit donc que le changement de vitesse locale est du aux forces extérieurs, et à la différences de vitesse environnantes, en évitant de trop se compresser, et n'accélérant pas trop vite proportionnelement à la constante de viscosité.
+
+Tout du long, nous allons simplifier notre fluide étudier, en général, les fluides dont on s'intéresse (surtout l'eau) ne sont pas visqueux, et aussi (quasiment) incompréssible, cela simplifie nos équations, ce qui rends la simulation plus simple et plus rapide, nos nouvelles équations:
+
+\begin{itemize}
+    \item Conservation:
+        \[
+            \grad \cdot \vec{V} = 0
+        \]
+    \item Incompréssible:
+        \[
+            \grad p = 0
+        \]
+    \item Moments:
+        \[
+            \pdv{\vec{V}}{t} = \vec{g} - \vec{V} \cdot \grad \vec{V}
+        \]
+\end{itemize}
+
+\subsection{Simulateurs}
+\subsubsection{Simulateur Newtonien}
 TODO
-\subsection{Simulateur Newtonien}
+\subsubsection{Simulateur Lagrangien}
 TODO
-\subsection{Simulateur Lagrangien}
-TODO
-\subsection{Simulateur Mixtes}
+\subsubsection{Simulateur Mixtes}
 TODO
 
 \section{Le projet}

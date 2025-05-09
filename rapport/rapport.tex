@@ -1,0 +1,708 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{physics}
+
+\usepackage[paperheight=16cm,paperwidth=14cm,textwidth=12cm]{geometry}
+
+\usepackage[french]{babel}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+
+
+\SetKwInput{KwInput}{Entrée}
+\SetKwInput{KwOutput}{Sortie}
+
+
+\author{Stephane LEJEUNE, Jacques PHAM BA NIEN, Andy GROSSU, Victorien VAISSE}
+\title{Projet de Simulateur de Fluide}
+
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+Pour le projet, nous avons choisis de construire un simulateur de fluide, projet non proposé de base, mais c'est un projet que Stephane et Jacques voulaient déjà faire depuis la L2, nous avons donc proposer le projet et il a été accepté.
+
+Étant en double licence, le style de compétences utiles qu'on peut apprendre avec un projet informatique sont différentes, le projet de simulateur de fluide nous a sembler être un bon compromis entre demandant des compétences informatiques et mathématiques. 
+
+Ce projet, nous permet d'explorer comment les techniques qu'on as appris durant différent cours analyse numériques peuvent être utiliser pour quelque chose de plus ``réel'' (et visuel) que résoudre un système linéaire ou des équations différentiels abstraites.
+
+Du point de vu informatique, ce projet nous oblige à interagir avec une interface graphique, choisir nos structures pour representer les particules (ou ne pas les representer)
+
+Nous sommes donc reconnaissant que notre proposition de projet ait été accepté.
+
+L'objectif du projet est double:
+\begin{enumerate}
+    \item Implémenter une simulation de fluide stable, visuellement cohérente, et intéractive, capable de gérer plusieurs centaintes, voire mileirs de particules.
+    \item Intégrer cette simulation dans un moteur de jeu 2D, en l'occurrence, {\emph {Unity}}, pour permettre une visualisation en temps réel avec un contrôle sur les paramètres physiques.
+\end{enumerate}
+
+Durant le développement, de nombreux défis ont été rencontrés: gestion des densités divergentes, explosions numériques liées à une mauvaise évaluation de la pression, instabilités aux frontières, ou encore des performances non optimales à partir d'un certain nombre de particules. Plusieurs améliorations progressives ont été apportés, incluant l'ajout d'une grille spatiale, la prédiction de position, un modèle de pression stable (Tait), et une modélisation simplifiée de la viscosité.
+
+Ce rapport détaille les fondements physiques du modèles SPH, la manière dont il a été implémenté,optimisé et visualié dans Unity, ansi que les résultats obtenus, leurs limites et des pistes d'améliorations futures.
+
+\section{Théorie de simulateur de fluide}
+\subsection{Equation de Navier-Stokes}
+Pour comprendre comment un simulateur de fluide marchent, il nous as d'abord fallu comprendre comment un fluide est sensé se comporter.
+
+On as certes un modèle en nous de comment cela fonctionne, on a déjà vu des fluides, mais transmettre cette intuition en instructions est loins d'être facile, cela n'est pas notre travail, c'est celui des physiciens. Nous avons donc regarder à comment les physiciens décrivent les lois que les fluides doivent respecter.
+
+Déjà, un ``fluide'' en physique ne décrit pas seulement le comportement d'un liquide, cela décrit aussi le comportement des gas, leurs comportement sont étudier dans la ``mécanique des fluides''.
+
+Ses lois sont appeler ``équations de Navier-Stokes'':
+
+\begin{enumerate}
+    \item Équation de continuité:
+        \[
+            \grad \cdot \vec{V} = 0
+        \]
+    \item Équation de moments:
+        \[
+            \rho (\pdv{\vec{V}}{t} + \vec{V}\cdot \grad \vec{V}) = - \grad p  + \mu \grad ^ 2 \vec{V} + \vec{F}
+        \]
+\end{enumerate}
+
+L'équation de continuité nous dit que l'énergie mécanique du fluide ne change pas avec le temps (sa dérivé est nulle).
+
+L'équation de moments est plus complexe, elle décrit les forces locales qui sont exercé sur notre fluide, décortiquons ce que veut dire chaque termes:
+
+\begin{itemize}
+    \item \(\rho\) est la densité (locale, mais cela n'importe peu pour la suite) de notre fluide, donc c'est la masse divisé par le volume autour d'un point.
+    \item \(\vec{F}\) est la force externe exercé sur notre fluide, ici c'est juste la gravité. La force exercé par la gravité localement est \(\vec{g} \frac{m}{V}\) où \(\vec{g}\) est la force gravitationnel universelle, \(m\) est la masse et \(V\) est le volume. Autrement dit: 
+        \[\vec{F} = \rho\vec{g}\].
+    \item \(\vec{V}\) est le champ vectoriel de la vitesse du fluide. Champ vectoriel car en tout point, le vecteur direction peut être différent.
+    \item \(p\) est la pression du fluide.
+    \item \(\mu\) est une constante propre au fluide étudié, cela modèle la viscosité, plus elle est grande, plus le fluide est visqueux, ce terme limite l'accélaration.
+\end{itemize}
+
+Cette équation nous dit donc que le changement de vitesse locale est du aux forces extérieurs, et à la différences de vitesse environnantes, en évitant de trop se compresser, et n'accélérant pas trop vite proportionnelement à la constante de viscosité.
+
+Tout du long, nous allons simplifier notre fluide étudier, en général, les fluides dont on s'intéresse (surtout l'eau) ne sont pas visqueux (nous rajouterons la viscosité plus tard pour des raisons de précision numériques, mais ignorons ce paramètre pour l'instant), et aussi (quasiment) incompréssible, cela simplifie nos équations, ce qui rends la simulation plus simple et plus rapide, nos nouvelles équations:
+
+\begin{itemize}
+    \item Conservation:
+        \[
+            \grad \cdot \vec{V} = 0
+        \]
+    \item Incompréssible:
+        \[
+            \grad p = 0
+        \]
+    \item Moments:
+        \[
+            \pdv{\vec{V}}{t} = \vec{g} - \vec{V} \cdot \grad \vec{V}
+        \]
+\end{itemize}
+
+\subsection{Simulateurs}
+
+Certes maintenant on a ``comment les fluides doivent agir'', on n'a pas ``comment les faire agir comme tel''.
+
+Pour observer la vie réel, cela n'a pas d'importance, pour un mathématicien non plus, mais un ordinateur de peut pas gérer des équations différentiels de manière exactes sur un volume continu, il y aurait juste beaucoup trop de données à stoquer et de calcul à faire (même, une infinité non dénombrable, d'où cette incapacité).
+
+Ainsi, on est obliger de simplifier notre tache, au lieu d'obtenir un système agissant {\emph {exactement}} comme un fluide idéal, il faut faire un système qui agit {\emph {approximativement}} comme un fluide idéal, les physiciens font déjà cela pour simplifier les calculs (nous ne faisons pas en général de la théories des probabilités et des équations depuis le quantique pour des fluides, car il y aurait trop de termes agissant entre eux, obscursissant les calculs, et même pourrait rendre des équations insolvables de manière numériques), en informatique, nous allons passer du continu au discret, perdant ainsi de la précision pour en échange, avoir de la possibilité et de la vitesse de calcul.
+
+Il y a plusieurs manières de discrétiser notre problème:
+
+\subsubsection{Simulateur Newtonien}
+
+On peut discretiser notre problème en considérant d'avoir une grille de vecteurs au lieu d'un champs, nous appellons chaques éléménts de la grille une ``boîte'' pour des raisons de facilité de visualisation.
+
+Ainsi, il faut modeler la quantité de fluide passant d'une boîte à ses boites voisinnes.
+
+Nous avons seulement besoin de modéliser le passage de fluide d'une boîte à ses voisinnes directes dans les directions de gauche, droite, haut et bas, pas besoin des diagonales.
+
+Ainsi, une optimisation est de sauvegarder les magnitudes de ces flux au lieu de la magnitude et direction du flux partant du centre de la boîte.
+
+En pseudocode, le calcul du flux ressemble à ça:
+
+\begin{algorithm}
+    \caption{Simulation de Newton}
+\KwInput{grille}
+\KwOutput{Même grille}
+\For{boîte dans grille} {
+    Ajout flux de boîte à la boîte en dessous\;
+}
+Mettre\_pression\_à\_zero(grille)\;
+\end{algorithm}
+
+Pour fixer la pression (faire que le flux en entré et en sortie de toutes boîtes est à 0), une approche (Gauss-Seidel) est de fixer la pression  de chaque boîte un par un, cela va defixer nos boîte fixé auparavent, mais en répétant cette opération, on converge vers la bonne solution (car la matrice associé à une diagonale dominante, mais ici la démonstration importe peu).
+
+Appelons \(s(i, j)\) la ``facilité'' à pousser le flux de \(i\) vers \(j\) (par exemple, peut être mis à 0 pour représenter que \(j\) est un mur, permet aussi de mettre en contacte des fluides plus dense, etc.), on peut alors faire:
+
+\begin{algorithm}
+    \caption{Mettre pression à zero Newton}
+    \KwInput{grille, nombreÉtapes et \(s\)}
+    \KwOutput{Même grille}
+    étape = 0 \;
+    \While{étape < nombreÉtapes}{
+        \For{boîte dans grille} {
+            d = 0 \;
+            flux = 0 \;
+            \For{voisin dans voisins de boîte} {
+                d = d + s(boîte, voisin) \;
+                flux = flux + flux\_entre(boîte, voisin) * s(boîte, voisin)\;
+            }
+            \For{voisin dans voisins de boîte} {
+                flux\_entre(boîte, voisin) -= flux * s(boîte, voisin) / d \;
+            }
+        }
+    }
+\end{algorithm}
+
+Pour des raisons de performances, si il n'y a pas beaucoup de flux, il est également possible de mettre plusieurs boîte ensembles, de manière à ne plus avoir de grille, et se focaliser sur les endroits où il y a le plus d'actions (ce sont les endroits les plus important niveau comportement), il faudra alors changer le \(s\), une autre raison pour laquel avoir \(s\) est pratique.
+
+\subsubsection{Simulateur Lagrangien}
+
+Une autre approche est  de discretiser notre problème en une manière plus intuitive, en simulant nos {\emph {particules}} d'eaux, néanmoins, dans un fluide usuel, il y a beaucoup trop de particules, donc à la place, on va simuler des très grosses particules, ce qui est absurde physiquement mais marche relativement bien.
+
+L'approche Lagrangienne permet de ne pas avoir à considerer que tout notre environement est dans un fluide, par exemple ne pas avoir à considerer à la foix l'eau {\emph {et}} l'air qui l'alentour.
+
+Cette approche est plus proche de comment on intuitionne les fluides, mais plus loins du calcul mathématique que nous avons dérivé, il faut donc travailler avec des calcules plus complexe pour obtenir des valeurs tel que la vitesse, la température ou même la pression, ce problème de pression impacte de manière directe les performances, car on a généralement besoin de cette valeur pour simuler un fluide (à moins qu'on ait un grain très fin, alors les collisions entre particules génèrent d'elles même avec haute probabilités, des intéractions faisant penser à celle de la densité, en effet, un ``fluide'' n'est qu'un amas de beaucoup de particules intéragissant localement entre elles, notre comportement idéal n'est que le résultat probabiliste moyen que ces intéractions créent à grande échelle, sujet étudier en Physique Statistique).
+
+Les soucis d'implémentation d'une méthode Lagrangienne sera expliquer plus tard (le simulateur SPH (Smoothed Paricle Hydrodynamics)) en détail, nous laissons donc cette sous section sans.
+
+Néanmoins, ce qu'une approche Lagrangienne permet de faire, est de prendre un simulateur physique d'intéraction de corps usuel, et directement avoir nos fluides ``gratuitement''.
+
+Cela permet aussi de l'étendre plus facilement, en effet, nous avons déjà l'intéraction entre petites particules, avec moins d'effort qu'avec une méthode Eulerienne, nous pouvons rajouter l'interaction de ces particules sur des objets de grande tailles.
+
+\subsubsection{Simulateur Mixtes}
+
+Tout comme vous avez pus le remarquer, les approches Newtoniennes et Lagrangiennes sont très différentes, et ont des bénéfices et des inconvénients.
+
+Ce qui laisse la possibilité de mixer ces deux approches pour essayer de combler les inconvénients de chaques méthodes par l'autre.
+
+Néanmoins, cette approche demande de gros efforts d'implémentation, beaucoup de test car il y a beaucoup plus de facteurs mouvants dans le système, pour des effets sur la performances qu'on peut obtenir en choississant un système et l'optimisation bien avec le même effort (mais un système mixte et optimisé pourrait être plus rapide).
+
+\subsubsection{Simulateur SPH (Smoothed Paricle Hydrodynamics)}
+
+C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord penché sur une approche Newtonienne pour des raisons de simplicité, mais cette approche nous permets d'explorer plus de choses, sans non plus être incroyablement complexe niveau théorique ou pratique.
+
+\paragraph{Repréentation des particules}
+
+Chaque particules sont caractérisées par:
+
+\begin{itemize}
+    \item un vecteur position \(\vec{r}\) (le \(p\) est déjà pris pour la pression)
+    \item un vecteur vitesse \(\vec{v}\)
+    \item une densité \(\rho\)
+    \item une pression \(p\)
+\end{itemize}
+
+Chaque particule possède également une masse \(m\) partagé avec les autres particules, choisi de manière à respecter la masse total du fluide.
+
+\paragraph{Fonction de lissage (Kernel)}
+
+L'originalité de SPH repose sur l'utilisation d'un noyau de lissage \(W(r, h)\), une fonction radiale (ne dépendant seulement de la distance) pondérant l'influence d'une particule en fonction de la distance \(r = \norm{\vec{r}_i - \vec{r}_j}\) entre les particules \(i\) et \(j\) (on impose aussi \(\vec{r}_i \ne \vec{r}_j\)), définit par:
+\[ W(r, h) = \begin{cases}
+        \frac{4}{\pi h^3}(h-r)^2 & \text{si}\, r < h \\
+        0 & \text{sinon}
+    \end{cases}
+\]
+
+On a que pour n'importe quel grandeux physique \(A\) sur un point (n'étant pas forcément une particule), on peut l'approximer par:
+
+\[
+    A(\vec{r}) = \sum_{i} m_i \frac{A_i}{\rho_i} W(\norm{\vec{r} - \vec{r_i}}, h)
+\]
+
+où \(A_i\) est cette grandeur à la particule \(i\).
+
+Sa dérivé spatiale est également utilisée pour calculer les forces de pression, avec \(r < h\):
+
+\[
+    \grad W(r, h) = -\frac{8}{\pi h^3}(h - r)\frac{\vec{r}}{r}
+\]
+
+\paragraph{Calcul de densité}
+
+La densité locale \(\rho_i\) est estimée à partir des particules voisines:
+
+\[
+    \rho_i = \sum_j m_j W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+Ce qui fait sens physiquement, une masse pondéré par le volume du voisinage.
+
+\paragraph{Modèle de pression - Équation de Tait}
+
+Afin de stabiliser et d'éviter les oscillations numériques, une équation d'état non-linéaire est utilisée:
+
+\[
+    P_i =  k \left (\left ( \frac{\rho_i}{\rho_0}\right )^\gamma - 1 \right )
+\]
+
+avec:
+
+\begin{itemize}
+    \item \(\rho_0\): la densité au repos (exemple: 1000kg/m\(^2\) pour l'eau)
+    \item \(k\): constante de raideur (pressureCoefficient)
+    \item \(\gamma\): exposan (souvent entre 5 et 7, ici fixé à 7)
+\end{itemize}
+
+Ce modèle évite les pressions négatives et assurre une réponse plus fluide à la compression.
+
+On pourrait se dire puisque notre fluide est ``incompréssible'' que il ne devrait pas avoir de différence entre \(\rho_0\) et \(\rho_i\), mais nous faisons une simulations, au long terme le fluide agi de manière incompréssible en agissant contre la pression, mais ce n'est pas instantanné.
+
+\paragraph{Force de pression}
+
+La force de pression exercée sur une particule \(i\) est calculée par
+
+\[
+    \vec{f_i}^\text{pression} = - \sum_j m_j \left ( \frac{P_i + P_j}{2\rho_j}\right ) \grad W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+Ce terme assure la répulsion entre les paricules trop proches et la cohésion du fluide.
+
+\paragraph{Viscosité}
+
+Un terme de viscosité artificielle permet de modéliser l'amortissement des vitesses relatives et d'éviter les artéfacts numériques, ce terme est nécessaire dû à notre méthode de résolution d'équation différentiel (notre ``intégrateur''), en calculant l'état suivant à partir de l'état actuel, l'énergie à tendance à se créer à cause des erreurs numériques (et en calculant l'état suivant selon comment on calculerait l'état précédent pour être celui actuel, l'énergie à tendance à se perdre, créant de soi une viscosité qu'on aurait à réduire, des approches complexes existent, tel que les intégrateurs {\emph {simpléctiques}} qui intégres en restant sur la surface d'un {\emph {simplexe}}, obtenu avec les équations Hamiltoniennes de la méchaniques, mais ce sujet bien qu'intéressant et source d'amélioration n'a pas sa place à être trop développer ici). Ce terme est donné par:
+
+\[
+    \vec{f_i}^\text{viscosité} = \mu \sum_j m_j \left ( \frac{\vec{v_j} + \vec{v_i}}{\rho_j}\right ) \grad W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+où \(\mu\) est le coefficient de viscosité propre au fluide.
+
+\paragraph{Force externe}
+
+Une force de gravité est aussi appliquer à chaque particules:
+
+\[
+    \vec{f_i}^\text{gravité} = m_i \vec{g}
+\]
+
+\section{Le projet}
+
+\subsection{Pre-Unity: Le choix de rust}
+
+Nous (surtout Jacques) avons commencé avec de (trop) grandes ambitions sur le setup du projet.
+
+\begin{itemize}
+    \item le faire en {\emph {rust}} pour avoir des très bonnes performances.
+    \item implementer le build avec {\emph {nix}} pour une gestion automatique de {\emph {toutes}} dépendences (incluant obtenir rust, pour avoir la même version, le même système pour nous tous) avec {\emph {crane}}.
+    \item une gestions de faille de sécurités par un repot d'audit de packets, analyseur statique d'appelle insécure en temps qu'option de base d'utiliser crane!
+    \item pouvoir faire du cross-platform, et compiler notre code rust dans le CI pour plusieurs architectures et OS.
+    \item utiliser {\emph {nom}}, une librairies rust de grandeurs physiques, qui nous permettrait d'enlever tout bug correspondant à mélanger des éléments de grandeurs différents (qui sont forcément des bugs, car dépendant du choix exacte de grandeur)
+\end{itemize}
+
+Des questions se sont poser sur comment faire une fenêtre en rust, il y a très loins qu'une seule option, les deux idées prédominantes ont été d'utiliser la librairie {\emph {bevy}} ou {\emph {SDL2}} (proposition de Jacques, ayant un peu d'expérience en SDL2 dans d'autres langages (C)) ou de manière plus bas niveau, {\emph {wgpu}} (proposition de Stéphane).
+
+De manière merveilleuse, on n'aurait même pas à gerer l'installation de SDL2 grâce à nix! Et lier la librairie statiquement aurait fait que il n'y aurait pas eu besoin pour les utilisateur•ices d'installer quoi que ce soit, juste l'executable.
+
+Mais il y a eu des mais, essayer de setup le cross-platform était vraiment frustrant, trop frustrant, je ne l'ai au final pas fait, il aurait fallu à mes camarades d'installer nix, et sans utilier du caching, crane demandait trop souvent de réinstaller les dépendances, ce qui est long! Et même sans les demande d'installation de dépendances, il n'y avait pas le caching usuel fait par {\emph {cargo}} le build system de rust de base, tout était recompiler depuis la source au lieu de compiler une fois, puis utiliser des objets compilé. Ce qui a rendu l'utilisation encore plus lente que normalement. Chaque modification prenait des minutes, ce qui tue assez rapidement toutes joies ou volonté de programmer, donc l'utilisation de nix a été abandonné, avec lui, les perspectives d'utiliser SDL2.
+
+Nous avons tous de notre côté ensuite essayer de faire marche bery ou wgpu, mais bevy utilise un modèle assez spéciale, {\emph ECS} (Entity Component System) qui paraîssait pas très naturel et n'était pas le but de ce projet, et wgpu était trop bas niveau.
+
+Ce fut trop, on n'avancait pas, malgrè les qualités techniques, si on ne peut pas intéragir rapidement avec notre projet, il est plus difficile d'expérimenter, voir ce qui marche, etc., le choix était plus nuancé que prévu, nous avons donc abandonné rust pour avoir quelque chose qui règlait notre plus grand problème, le graphique, ainsi nous avons utilisé Unity ensuite.
+
+\subsection{Post-Rust : Unity}
+
+Ce fut plus simple.
+
+\subsubsection{Architecture générale du projet}
+
+Le projet repose sur une séparation claire des responsabilités:
+
+\begin{itemize}
+    \item \lstinline{FluidSimulator.cs} : logique de simulation et itération de l'algorithme SPH.
+    \item \lstinline{ParticleComponent.cs} : représentation individuelle d'une particule (GameObject)
+    \item \lstinline{BoundsRenderer.cs} : affichage des limites de la simulation
+    \item \lstinline{MainController.cs} (optionnel) : interface utilisateur et réglage dynamiques.
+\end{itemize}
+
+Chaque particule est associée à un GameObject contenant un {\emph {Transform}} et un script {\emph {ParticleComponent}}, qui est mis à jour visuellement à chaque frame à partir des données simulées.
+
+\subsubsection{Données simulées}
+
+Trois tableaux principaux contiennent les données physiques:
+
+\begin{itemize}
+    \item positions[] : positions des particules
+    \item velocities[] : vitesses
+    \item densities[] : densités locales calculées à chaque pas de simulation 
+\end{itemize}
+
+Un tableau de particles[] (struct contenant position/velocity/density) centralise l’état du système. Les GameObjects sont ensuite synchronisés avec ces données.
+
+\subsubsection{Initialisation des paricules}
+
+L'initialisation peut se fiare de manière: 
+
+\begin{itemize}
+    \item aléatoire : dispersion uniforme dans la boîte
+    \item en grille : positionnement ordonné (recommandé pour stabilité initial)
+\end{itemize}
+
+Un prefab de particule est instancié pour chaque entité simulée. Le particleCount et particleSpacing sont ajustables à l’exécution.
+
+\subsubsection{Étapes du simulateur}
+
+Chaque frame effectue les étapes suivantes:
+
+\begin{enumerate}
+    \item Applicaion de la gravité (accélération constante sur les vitesses)
+    \item Prédiction des positions à parir des vitesses
+    \item Mise à jour de la grille spatiale (accélération du voisinage)
+    \item Calcul des pressions (Tait) et forces de pression
+    \item Ajour d'une force de viscosité pour stabiliter les interactions
+    \item Mise à jouer des vitesses en fonction des accélération
+    \item Correction de la position et résolution des collisions (rebond et amorissemenets sur les bords)
+    \item Mise à jour ds GameObjects Unity pour la visualisation
+\end{enumerate}
+
+\paragraph{Grille spatiale}
+
+Afin de limiter la complexité du voisinage à \(O(n)O(n)O(n)\) plutôt que \(O(n^2)O(n^2)O(n^2)\), une grille spatiale 2D est utilisée. Les particules sont associées à des cellules de taille égale au rayon de lissage \(h\). Chaque cellule contient une liste d’indices de particules.
+
+Lors du calcul des interactions, seules les cellules voisines \(3×33 \times 33×3\) sont parcourues, ce qui améliore significativement les performances.
+
+\paragraph{Résolution des collisions}
+
+Le système est boné par un rectangle de dimensions fixes (ex : 20x15 unités). Chaque particule est testée par rapport à ces bornes :
+
+\begin{itemize}
+    \item Si elle sort, sa position est corrigée à la limite
+    \item Sa vitesse est inversée et amortie par un facteur dampening Factor.
+\end{itemize}
+
+Cela permet de contenir le fluide tout en simulant un rebond partiel.
+
+\paragraph{Visualisation}
+
+
+Chaque particule possède un SpriteRenderer, dont la couleur peut être modifiée dynamiquement pour refléter la densité ou la pression.
+
+Les bords de la simulation sont affichés à l’aide d’un LineRenderer, utilisant un matériau non lumineux (Sprites/Default) pour être bien visible en mode 2D.
+
+\paragraph{Paramètres ajustables}
+
+Les constantes suivantes sont exposées dans l’éditeur pour permettre des expérimentations en direct :
+
+\begin{itemize}
+    \item Nombre de particules
+    \item Taille de la boîte 
+    \item Rayon de lissage \(h\)
+    \item Coefficient de pression
+    \item Viscosité
+    \item Gravité
+    \item Facteur d'amortissement
+\end{itemize}
+
+\paragraph{Performances}
+
+Le simulateur est capable de gérer jusqu'à {\emph {1000 particules}} à environ {\emph {100-120 FPS}} sans multithreading ni calcul GPU. L'utilisaion d'une grille spatiale et la simplification des formules mathématiques permettent une exécution acceptable sur le CPU.
+
+Des optimisations sont possibles (section suivante) pour un déploiement plus large.
+
+\subsubsection{Difficultés rencontrées et optimisations}
+
+Tout ne s'est pas directement passer sans accroc directement.
+
+\paragraph{Problèmes initiaux et de stabilités}
+
+Au départ, la simulation souffrait de comportement instables:
+
+\begin{itemize}
+    \item Les particules explosaient sous pression à proximité des bords
+    \item Des vitesses deenaient infinies ou NaN
+    \item L'écoulement ne ressemblait pas à une fluide mais à un gaz chaotique.
+\end{itemize}
+
+Ces symptômes ont été causés par:
+
+\begin{itemize}
+    \item Une mauvaise gestion des densités proches de zéro (division par zéro)
+    \item Une mauvaise évaluation des gradients de pression
+    \item Des paramètres physiques mal calibrés (rayon de lissage, pression, densité cible)
+\end{itemize}
+
+Corrections apportées:
+
+\begin{itemize}
+    \item Clamp des distances trop petites pour éviter les divisions par zéro
+    \item Vérification de la validité des valeurs physiques à chaque étape
+    \item Introduction d’un terme de viscosité artificielle.
+\end{itemize}
+
+\paragraph{Implémentation de la prédiction}
+
+Pour améliorer la stabilité, un schéma de prédiction a été introduit :
+
+\begin{itemize}
+    \item Calcul des positions futures à partir de la vitesse (PredictedPositions)
+    \item Calcul des densités et forces à partir de ces positions anticipées.
+\end{itemize}
+
+Cela permet de mieux évaluer les interactions futures et limite les accélérations irréalistes.
+
+\paragraph{Problèmes liés aux collisions}
+
+Un comportement problématique est apparu lorsque des particules se massaient contre un bord : elles accumulaient de la pression jusqu’à ``exploser''.
+
+Solution:
+
+\begin{itemize}
+    \item Implémentaiton d'un rebond amorti dans ResolveCollisions
+    \item Ajout d'une légère absorption de l'énergie à chaque impact
+\end{itemize}
+
+Cela a permis de dissiper les pics de presion localisés.
+
+\paragraph{Optimisation par grille spaiale}
+
+Sans grille, le calcul du voisinage est en \(O(n^2)\). À 1000 particules, cela devient inutilisable. L’introduction d’une grille spatiale 2D a permis de:
+
+\begin{itemize}
+    \item Réduire drastiquement le coût de calcul des voisins
+    \item Maintenir un voisinage local et pertinent (9 cellules voisines max)
+    \item Garder une simulation interactive
+\end{itemize}
+
+Chaque cellule a une taille égale au rayon de lissage \(h\), garantissant que toutes les particules influentes sont proches.
+
+\paragraph{Séparation des responsabilités}
+
+L’erreur de conception initiale était de lier directement les Transform Unity aux calculs physiques. Cela a été remplacé par:
+
+\begin{itemize}
+    \item Une structure de données physique (positions, velocities, etc.)
+    \item Une mise à jour des GameObjects après le calcul physique
+\end{itemize}
+
+Cette séparation a permis d'éviter les confusions de coordonnées et de mieux contrôler la logique du moteur physique.
+
+\paragraph{Ajustements empiriques des constantes}
+
+Les valeurs suivantes ont nécessité de nombreux tests pour trouver un équilibre :
+
+\begin{itemize}
+    \item smoothingRadius : trop petit = comportement granulaire, trop grand = simulation molle et lente.
+    \item pressureCoefficient : trop fort = explosion, trop faible = fluide mou.
+    \item targetDensity : trop bas = fluide instable, trop haut = fluide immobile.
+    \item viscosity : essentiel pour empêcher les oscillations chaotiques.
+\end{itemize}
+
+\paragraph{Ajout de l'équation de Tait}
+
+Plutôt que d’utiliser une pression linéaire \(P = k(ρ - ρ\_0)\), une formulation non linéaire via l’équation de Tait a été introduite (voir plus haut).
+
+Donnant un comportement plus incompressible au fluide et stabilise la simulation sous forte pression.
+
+\paragraph{Problèmes de performance}
+
+À 1000 particules, la simulation tourne autour de 80 FPS sur CPU seul. Les points limitants sont :
+
+\begin{itemize}
+    \item Le recalcul des densités (même optimisé par grille)
+    \item nombre élevé dde paricules à mettre à jour visuellement
+\end{itemize}
+
+Des optimisation envisageables:
+
+\begin{itemize}
+    \item Passage en Jobs System + Burst pour paralléliser
+    \item Remplacement des GameObjects par un DrawMeshInstanced ou ComputeShader
+    \item Réduction de la fréquence de mise à jour visuelle
+\end{itemize}
+
+\subsubsection{Visualisation et résultas expérimentaux}
+
+\paragraph{Mise en place de la visualisation}
+
+Chaque particule est représentée par un GameObject Unity contenant :
+
+\begin{itemize}
+    \item Un SpriteRenderer pour l'affichage visuel
+    \item Un composant ParticleComponent pour stocker les données physiques (position, vitesse, pression, densité)
+    \item Une couleur statique ou dynamique (gradient de pression ou densité)
+\end{itemize}
+
+Une boîte englobante (bounding box) a été ajoutée avec un LineRenderer, rendant les limites visibles pendant l'exécution. Son objectif est double :
+
+\begin{itemize}
+    \item Encadrer l’espace simulé
+    \item Servir de référence visuelle aux collisions
+\end{itemize}
+
+Un affichage du framerate a été intégré à l’aide de GUI.Label dans OnGUI() afin de suivre les performances en temps réel.
+
+\paragraph{ Expérimentations avec différents paramètres}
+
+Nombres de particules: Des tests ont été réalisés pour plusieurs valeurs:
+
+\begin{itemize}
+    \item 100 particules : fluide trop dispersé, peu cohérent visuellement,
+    \item 300–500 particules : forme des jets visible, comportement liquide partiel,
+    \item 1000 particules : comportement réaliste, mais chutes de performance perceptibles.
+\end{itemize}
+
+Rayon de lissage:
+
+Une valeur trop faible donne un comportement granulaire (faible interaction), tandis qu’un rayon trop large lisse trop les détails. Une valeur équilibrée autour de 0.5–0.8 unités donne de bons résultats.
+
+Densité cible et pression:
+
+Lorsque la densité cible est trop faible, les particules s'effondrent. Si elle est trop élevée, elles restent rigides et ne se déplacent plus. La pression (via le coefficient ou l’équation de Tait) a été ajustée empiriquement pour assurer une compression minimale et éviter les explosions.
+
+Viscosié:
+
+L'ajout de viscosité a permis d'éviter les oscillations trop fortes et d’ajouter un comportement réaliste dans les courants.
+
+\paragraph{Cas de test visuels}
+
+Écoulement libre: Un ensemble de particules est relâché dans la boîte sans obstacle. Résultat:
+
+\begin{itemize}
+\item Chute rapide sous gravité,
+\item Formation de vagues lors du contact avec le sol,
+\item Distribution progressive de l'énergie, arrêt quasi stable au bout de quelques secondes.
+\end{itemize}
+
+Fluide dans un récipient:
+
+Les particules sont initialisées dans une zone restreinte. Elles remplissent progressivement la boîte jusqu’à atteindre une forme semi-stable, rappelant un liquide dans un récipient.
+
+
+Compression dans un coin : Des particules sont poussées dans un coin via une initialisation biaisée. Résultat :
+
+\begin{itemize}
+\item Augmentation locale de la pression,
+\item Répulsion naturelle sous l’effet de la pression partagée,
+\item Retour progressif à une forme uniforme.
+\end{itemize}
+
+Ces cas permettent de valider:
+
+\begin{itemize}
+\item Le bon fonctionnement de la formule de pression,
+\item L’effet correct de la résolution de collision,
+\item La cohérence du modèle SPH implémenté.
+\end{itemize}
+
+\paragraph{Limitations observées}
+
+\begin{itemize}
+\item L’absence de résolution itérative de densité (comme dans Position-Based Fluids) rend la simulation parfois trop compressible,
+\item Le rebond sur les bords est encore un peu sec (non glissant),
+\item Les performances ne sont pas viables à très haute résolution sans optimisation GPU.
+\end{itemize}
+
+\subsubsection{Perspective d'améliorations possibles}
+
+Malgrès ce qu'on a fait, il y a et il y aura toujours des améliorations possibles.
+
+\paragraph{Optimisation des performances}
+
+
+Actuellement, la simulation est effectuée entièrement sur le CPU, en C\#, via une boucle naïve sur toutes les particules. Même avec l’introduction d’une grille spatiale pour réduire la complexité, le temps de calcul reste important au-delà de 1000 particules.
+
+Des pistes d’optimisation incluent :
+
+\begin{itemize}
+
+\item Multithreading avec le système Jobs de Unity,
+\item Burst Compiler pour accélérer les calculs mathématiques,
+\item Compute Shaders : déplacer toute la simulation sur GPU pour bénéficier du parallélisme massif,
+\item Implémentation d’un tri spatial plus efficace comme les grilles uniformes optimisées ou les arbres KD
+\end{itemize}
+
+\paragraph{Amélioration du modèle physique}
+
+L’approche actuelle repose sur un SPH très basique. Pour tendre vers un comportement liquide plus réaliste, plusieurs extensions sont possibles :
+\begin{itemize}
+\item Position-Based Fluids (PBF) : permet de contraindre explicitement la densité en résolvant un système à chaque frame. Cela stabilise fortement le comportement du fluide.
+\item XSPH Viscosity : amélioration de la viscosité pour lisser les vitesses entre particules voisines sans diffusion excessive.
+\item Surface tension : pour modéliser les effets de cohésion à l’interface fluide-air.
+\item Vorticity confinement : pour accentuer les tourbillons et donner du caractère au fluide.
+\end{itemize}
+
+\paragraph{Interaction avec des obstacles}
+
+Une amélioration majeure serait d’introduire des obstacles fixes ou dynamiques dans la scène. Cela implique :
+
+\begin{itemize}
+\item Détection de collision fluide-objet,
+\item Réponse correcte (glissement, contournement, adhésion),
+\item Éventuellement, introduction d’une grille distance-signée (SDF) pour représenter les géométries complexes.
+\end{itemize}
+
+\paragraph{Visualisation avancée}
+
+L’affichage actuel repose sur des sprites statiques. Pour une meilleure lisibilité :
+
+\begin{itemize}
+\item Application d’un gradient de couleur basé sur la pression ou la densité,
+\item Ajout d’un mesh fluide avec un shader de rendu réaliste (reflets, transparence),
+\item Visualisation du champ de vitesse (flèches vectorielles, lignes de courant),
+\item Intégration dans un monde 3D stylisé, tout en conservant les calculs en 2D.
+\end{itemize}
+
+\paragraph{Interface utilisateur}
+
+Pour rendre l’expérience interactive et accessible :
+
+\begin{itemize}
+\item Curseurs en temps réel pour ajuster les paramètres (gravité, pression, viscosité, etc.),
+\item Possibilité d’ajouter ou de supprimer des particules dynamiquement,
+\item Sauvegarde/chargement de scènes d’expérimentation.
+\end{itemize}
+
+\section{Conclusion}
+
+Ce projet avait pour objectif de concevoir et implémenter une simulation de fluide en deux dimensions à l’aide de la méthode SPH, dans l’environnement Unity. Malgré la complexité inhérente à la dynamique des fluides, une solution fonctionnelle et visuellement cohérente a été obtenue.
+
+La simulation repose sur un modèle simplifié mais robuste : chaque particule transporte ses propriétés physiques et interagit avec ses voisines à travers des noyaux de lissage. Des termes de pression, de viscosité, de gravité et de collision ont été implémentés, avec une attention particulière portée à la stabilité numérique et à l’optimisation via une grille spatiale.
+
+Plusieurs problèmes ont été rencontrés au cours du développement, notamment des instabilités (NaNs, explosions aux frontières, vitesses divergentes), des chutes de performances (FPS bas avec un grand nombre de particules), ainsi que des imprécisions liées aux choix de constantes physiques. Ces problèmes ont été progressivement résolus grâce à :
+
+\begin{itemize}
+\item l’introduction de prédictions de positions,
+\item un calcul de densité plus précis,
+\item l’utilisation de l’équation de Tait pour la pression,
+\item et l’ajout d’une viscosité contrôlée.
+\end{itemize}
+
+Le comportement du fluide, bien qu’encore éloigné d’un modèle réaliste complet, est fluide, cohérent, et suffisamment expressif pour des démonstrations visuelles. La simulation réagit de manière plausible à la gravité, aux forces de pression et aux collisions avec les parois du domaine.
+
+\section{Bibliographie}
+
+\subsection{Rust et ses crates}
+
+\begin{itemize}
+\item \url{https://jimskapt.github.io/rust-book-fr/}
+\item \url{https://sotrh.github.io/learn-wgpu/beginner/tutorial3-pipeline/}
+\item \url{https://github.com/sotrh/learn-wgpu/tree/master/}
+\item \url{https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html}
+\item \url{https://toji.dev/webgpu-best-practices/}
+\item \url{https://github.com/amengede/wgpu}
+\item \url{https://docs.rs/winit/latest/x86_64-unknown-linux-gnu/winit/index.html}
+\end{itemize}
+
+\subsection{Théories derrière la simulation}
+
+\begin{itemize}
+\item \url{https://cg.informatik.uni-freiburg.de/intern/seminar/gridFluids_fluid-EulerParticle.pdf}
+\item \url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3113801}
+\item \url{https://matthias-research.github.io/pages/publications/sca03.pdf}
+\item \url{https://ramakarl.com/pdfs/2014_Hoetzlein_FastFixedRadius_Neighbors.pdf}
+\item \url{https://www.ljll.fr/~frey/papers/levelsets/Clavet%20S.,%20Particle-based%20viscoelastic%20fluid%20simulation.pdf}
+\item \url{https://sph-tutorial.physics-simulation.org/pdf/SPH_Tutorial.pdf}
+\item \url{https://github.com/SebLague/Fluid-Sim/}
+\end{itemize}
+
+\subsection{Utilisation d'unity}
+
+\begin{itemize}
+\item \url{https://docs.unity.com/}
+\item \url{https://www.youtube.com/watch?v=XtQMytORBmM}
+\end{itemize}
+
+\end{document}

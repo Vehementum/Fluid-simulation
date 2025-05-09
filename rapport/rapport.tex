@@ -3,6 +3,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\usepackage{listings}
 \usepackage{physics}
 
 \usepackage[paperheight=16cm,paperwidth=14cm,textwidth=12cm]{geometry}
@@ -187,7 +188,7 @@ Néanmoins, cette approche demande de gros efforts d'implémentation, beaucoup d
 
 C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord penché sur une approche Newtonienne pour des raisons de simplicité, mais cette approche nous permets d'explorer plus de choses, sans non plus être incroyablement complexe niveau théorique ou pratique.
 
-\subsubsection{Repréentation des particules}
+\paragraph{Repréentation des particules}
 
 Chaque particules sont caractérisées par:
 
@@ -200,7 +201,7 @@ Chaque particules sont caractérisées par:
 
 Chaque particule possède également une masse \(m\) partagé avec les autres particules, choisi de manière à respecter la masse total du fluide.
 
-\subsubsection{Fonction de lissage (Kernel)}
+\paragraph{Fonction de lissage (Kernel)}
 
 L'originalité de SPH repose sur l'utilisation d'un noyau de lissage \(W(r, h)\), une fonction radiale (ne dépendant seulement de la distance) pondérant l'influence d'une particule en fonction de la distance \(r = \norm{\vec{r}_i - \vec{r}_j}\) entre les particules \(i\) et \(j\) (on impose aussi \(\vec{r}_i \ne \vec{r}_j\)), définit par:
 \[ W(r, h) = \begin{cases}
@@ -223,7 +224,7 @@ Sa dérivé spatiale est également utilisée pour calculer les forces de pressi
     \grad W(r, h) = -\frac{8}{\pi h^3}(h - r)\frac{\vec{r}}{r}
 \]
 
-\subsubsection{Calcul de densité}
+\paragraph{Calcul de densité}
 
 La densité locale \(\rho_i\) est estimée à partir des particules voisines:
 
@@ -233,7 +234,7 @@ La densité locale \(\rho_i\) est estimée à partir des particules voisines:
 
 Ce qui fait sens physiquement, une masse pondéré par le volume du voisinage.
 
-\subsubsection{Modèle de pression - Équation de Tait}
+\paragraph{Modèle de pression - Équation de Tait}
 
 Afin de stabiliser et d'éviter les oscillations numériques, une équation d'état non-linéaire est utilisée:
 
@@ -253,7 +254,7 @@ Ce modèle évite les pressions négatives et assurre une réponse plus fluide �
 
 On pourrait se dire puisque notre fluide est ``incompréssible'' que il ne devrait pas avoir de différence entre \(\rho_0\) et \(\rho_i\), mais nous faisons une simulations, au long terme le fluide agi de manière incompréssible en agissant contre la pression, mais ce n'est pas instantanné.
 
-\subsubsection{Force de pression}
+\paragraph{Force de pression}
 
 La force de pression exercée sur une particule \(i\) est calculée par
 
@@ -263,7 +264,7 @@ La force de pression exercée sur une particule \(i\) est calculée par
 
 Ce terme assure la répulsion entre les paricules trop proches et la cohésion du fluide.
 
-\subsubsection{Viscosité}
+\paragraph{Viscosité}
 
 Un terme de viscosité artificielle permet de modéliser l'amortissement des vitesses relatives et d'éviter les artéfacts numériques, ce terme est nécessaire dû à notre méthode de résolution d'équation différentiel (notre ``intégrateur''), en calculant l'état suivant à partir de l'état actuel, l'énergie à tendance à se créer à cause des erreurs numériques (et en calculant l'état suivant selon comment on calculerait l'état précédent pour être celui actuel, l'énergie à tendance à se perdre, créant de soi une viscosité qu'on aurait à réduire, des approches complexes existent, tel que les intégrateurs {\emph {simpléctiques}} qui intégres en restant sur la surface d'un {\emph {simplexe}}, obtenu avec les équations Hamiltoniennes de la méchaniques, mais ce sujet bien qu'intéressant et source d'amélioration n'a pas sa place à être trop développer ici). Ce terme est donné par:
 
@@ -273,7 +274,7 @@ Un terme de viscosité artificielle permet de modéliser l'amortissement des vit
 
 où \(\mu\) est le coefficient de viscosité propre au fluide.
 
-\subsubsection{Force externe}
+\paragraph{Force externe}
 
 Une force de gravité est aussi appliquer à chaque particules:
 
@@ -306,8 +307,104 @@ Nous avons tous de notre côté ensuite essayer de faire marche bery ou wgpu, ma
 Ce fut trop, on n'avancait pas, malgrè les qualités techniques, si on ne peut pas intéragir rapidement avec notre projet, il est plus difficile d'expérimenter, voir ce qui marche, etc., le choix était plus nuancé que prévu, nous avons donc abandonné rust pour avoir quelque chose qui règlait notre plus grand problème, le graphique, ainsi nous avons utilisé Unity ensuite.
 
 \subsection{Post-Rust : Unity}
-TODO
+
+Ce fut plus simple.
+
+\subsubsection{Architecture générale du projet}
+
+Le projet repose sur une séparation claire des responsabilités:
+
+\begin{itemize}
+    \item \lstinline{FluidSimulator.cs} : logique de simulation et itération de l'algorithme SPH.
+    \item \lstinline{ParticleComponent.cs} : représentation individuelle d'une particule (GameObject)
+    \item \lstinline{BoundsRenderer.cs} : affichage des limites de la simulation
+    \item \lstinline{MainController.cs} (optionnel) : interface utilisateur et réglage dynamiques.
+\end{itemize}
+
+Chaque particule est associée à un GameObject contenant un {\emph {Transform}} et un script {\emph {ParticleComponent}}, qui est mis à jour visuellement à chaque frame à partir des données simulées.
+
+\subsubsection{Données simulées}
+
+Trois tableaux principaux contiennent les données physiques:
+
+\begin{itemize}
+    \item positions[] : positions des particules
+    \item velocities[] : vitesses
+    \item densities[] : densités locales calculées à chaque pas de simulation 
+\end{itemize}
+
+Un tableau de particles[] (struct contenant position/velocity/density) centralise l’état du système. Les GameObjects sont ensuite synchronisés avec ces données.
+
+\subsubsection{Initialisation des paricules}
+
+L'initialisation peut se fiare de manière: 
+
+\begin{itemize}
+    \item aléatoire : dispersion uniforme dans la boîte
+    \item en grille : positionnement ordonné (recommandé pour stabilité initial)
+\end{itemize}
+
+Un prefab de particule est instancié pour chaque entité simulée. Le particleCount et particleSpacing sont ajustables à l’exécution.
+
+\subsubsection{Étapes du simulateur}
+
+Chaque frame effectue les étapes suivantes:
+
+\begin{enumerate}
+    \item Applicaion de la gravité (accélération constante sur les vitesses)
+    \item Prédiction des positions à parir des vitesses
+    \item Mise à jour de la grille spatiale (accélération du voisinage)
+    \item Calcul des pressions (Tait) et forces de pression
+    \item Ajour d'une force de viscosité pour stabiliter les interactions
+    \item Mise à jouer des vitesses en fonction des accélération
+    \item Correction de la position et résolution des collisions (rebond et amorissemenets sur les bords)
+    \item Mise à jour ds GameObjects Unity pour la visualisation
+\end{enumerate}
+
+\paragraph{Grille spatiale}
+
+Afin de limiter la complexité du voisinage à \(O(n)O(n)O(n)\) plutôt que \(O(n^2)O(n^2)O(n^2)\), une grille spatiale 2D est utilisée. Les particules sont associées à des cellules de taille égale au rayon de lissage \(h\). Chaque cellule contient une liste d’indices de particules.
+
+Lors du calcul des interactions, seules les cellules voisines \(3×33 \times 33×3\) sont parcourues, ce qui améliore significativement les performances.
+
+\paragraph{Résolution des collisions}
+
+Le système est boné par un rectangle de dimensions fixes (ex : 20x15 unités). Chaque particule est testée par rapport à ces bornes :
+
+\begin{itemize}
+    \item Si elle sort, sa position est corrigée à la limite
+    \item Sa vitesse est inversée et amortie par un facteur dampening Factor.
+\end{itemize}
+
+Cela permet de contenir le fluide tout en simulant un rebond partiel.
+
+\paragraph{Visualisation}
+
+
+Chaque particule possède un SpriteRenderer, dont la couleur peut être modifiée dynamiquement pour refléter la densité ou la pression.
+
+Les bords de la simulation sont affichés à l’aide d’un LineRenderer, utilisant un matériau non lumineux (Sprites/Default) pour être bien visible en mode 2D.
+
+\paragraph{Paramètres ajustables}
+
+Les constantes suivantes sont exposées dans l’éditeur pour permettre des expérimentations en direct :
+
+\begin{itemize}
+    \item Nombre de particules
+    \item Taille de la boîte 
+    \item Rayon de lissage \(h\)
+    \item Coefficient de pression
+    \item Viscosité
+    \item Gravité
+    \item Facteur d'amortissement
+\end{itemize}
+
+\paragraph{Performances}
+
+Le simulateur est capable de gérer jusqu'à {\emph {1000 particules}} à environ {\emph {100-120 FPS}} sans multithreading ni calcul GPU. L'utilisaion d'une grille spatiale et la simplification des formules mathématiques permettent une exécution acceptable sur le CPU.
 
 \section{Conclusion}
+
 TODO
+
 \end{document}

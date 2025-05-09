@@ -598,10 +598,114 @@ Ces cas permettent de valider:
 \item Les performances ne sont pas viables à très haute résolution sans optimisation GPU.
 \end{itemize}
 
+\subsubsection{Perspective d'améliorations possibles}
 
+Malgrès ce qu'on a fait, il y a et il y aura toujours des améliorations possibles.
+
+\paragraph{Optimisation des performances}
+
+
+Actuellement, la simulation est effectuée entièrement sur le CPU, en C\#, via une boucle naïve sur toutes les particules. Même avec l’introduction d’une grille spatiale pour réduire la complexité, le temps de calcul reste important au-delà de 1000 particules.
+
+Des pistes d’optimisation incluent :
+
+\begin{itemize}
+
+\item Multithreading avec le système Jobs de Unity,
+\item Burst Compiler pour accélérer les calculs mathématiques,
+\item Compute Shaders : déplacer toute la simulation sur GPU pour bénéficier du parallélisme massif,
+\item Implémentation d’un tri spatial plus efficace comme les grilles uniformes optimisées ou les arbres KD
+\end{itemize}
+
+\paragraph{Amélioration du modèle physique}
+
+L’approche actuelle repose sur un SPH très basique. Pour tendre vers un comportement liquide plus réaliste, plusieurs extensions sont possibles :
+\begin{itemize}
+\item Position-Based Fluids (PBF) : permet de contraindre explicitement la densité en résolvant un système à chaque frame. Cela stabilise fortement le comportement du fluide.
+\item XSPH Viscosity : amélioration de la viscosité pour lisser les vitesses entre particules voisines sans diffusion excessive.
+\item Surface tension : pour modéliser les effets de cohésion à l’interface fluide-air.
+\item Vorticity confinement : pour accentuer les tourbillons et donner du caractère au fluide.
+\end{itemize}
+
+\paragraph{Interaction avec des obstacles}
+
+Une amélioration majeure serait d’introduire des obstacles fixes ou dynamiques dans la scène. Cela implique :
+
+\begin{itemize}
+\item Détection de collision fluide-objet,
+\item Réponse correcte (glissement, contournement, adhésion),
+\item Éventuellement, introduction d’une grille distance-signée (SDF) pour représenter les géométries complexes.
+\end{itemize}
+
+\paragraph{Visualisation avancée}
+
+L’affichage actuel repose sur des sprites statiques. Pour une meilleure lisibilité :
+
+\begin{itemize}
+\item Application d’un gradient de couleur basé sur la pression ou la densité,
+\item Ajout d’un mesh fluide avec un shader de rendu réaliste (reflets, transparence),
+\item Visualisation du champ de vitesse (flèches vectorielles, lignes de courant),
+\item Intégration dans un monde 3D stylisé, tout en conservant les calculs en 2D.
+\end{itemize}
+
+\paragraph{Interface utilisateur}
+
+Pour rendre l’expérience interactive et accessible :
+
+\begin{itemize}
+\item Curseurs en temps réel pour ajuster les paramètres (gravité, pression, viscosité, etc.),
+\item Possibilité d’ajouter ou de supprimer des particules dynamiquement,
+\item Sauvegarde/chargement de scènes d’expérimentation.
+\end{itemize}
 
 \section{Conclusion}
 
-ODO
+Ce projet avait pour objectif de concevoir et implémenter une simulation de fluide en deux dimensions à l’aide de la méthode SPH, dans l’environnement Unity. Malgré la complexité inhérente à la dynamique des fluides, une solution fonctionnelle et visuellement cohérente a été obtenue.
+
+La simulation repose sur un modèle simplifié mais robuste : chaque particule transporte ses propriétés physiques et interagit avec ses voisines à travers des noyaux de lissage. Des termes de pression, de viscosité, de gravité et de collision ont été implémentés, avec une attention particulière portée à la stabilité numérique et à l’optimisation via une grille spatiale.
+
+Plusieurs problèmes ont été rencontrés au cours du développement, notamment des instabilités (NaNs, explosions aux frontières, vitesses divergentes), des chutes de performances (FPS bas avec un grand nombre de particules), ainsi que des imprécisions liées aux choix de constantes physiques. Ces problèmes ont été progressivement résolus grâce à :
+
+\begin{itemize}
+\item l’introduction de prédictions de positions,
+\item un calcul de densité plus précis,
+\item l’utilisation de l’équation de Tait pour la pression,
+\item et l’ajout d’une viscosité contrôlée.
+\end{itemize}
+
+Le comportement du fluide, bien qu’encore éloigné d’un modèle réaliste complet, est fluide, cohérent, et suffisamment expressif pour des démonstrations visuelles. La simulation réagit de manière plausible à la gravité, aux forces de pression et aux collisions avec les parois du domaine.
+
+\section{Bibliographie}
+
+\subsection{Rust et ses crates}
+
+\begin{itemize}
+\item \url{https://jimskapt.github.io/rust-book-fr/}
+\item \url{https://sotrh.github.io/learn-wgpu/beginner/tutorial3-pipeline/}
+\item \url{https://github.com/sotrh/learn-wgpu/tree/master/}
+\item \url{https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html}
+\item \url{https://toji.dev/webgpu-best-practices/}
+\item \url{https://github.com/amengede/wgpu}
+\item \url{https://docs.rs/winit/latest/x86_64-unknown-linux-gnu/winit/index.html}
+\end{itemize}
+
+\subsection{Théories derrière la simulation}
+
+\begin{itemize}
+\item \url{https://cg.informatik.uni-freiburg.de/intern/seminar/gridFluids_fluid-EulerParticle.pdf}
+\item \url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3113801}
+\item \url{https://matthias-research.github.io/pages/publications/sca03.pdf}
+\item \url{https://ramakarl.com/pdfs/2014_Hoetzlein_FastFixedRadius_Neighbors.pdf}
+\item \url{https://www.ljll.fr/~frey/papers/levelsets/Clavet%20S.,%20Particle-based%20viscoelastic%20fluid%20simulation.pdf}
+\item \url{https://sph-tutorial.physics-simulation.org/pdf/SPH_Tutorial.pdf}
+\item \url{https://github.com/SebLague/Fluid-Sim/}
+\end{itemize}
+
+\subsection{Utilisation d'unity}
+
+\begin{itemize}
+\item \url{https://docs.unity.com/}
+\item \url{https://www.youtube.com/watch?v=XtQMytORBmM}
+\end{itemize}
 
 \end{document}

@@ -9,6 +9,7 @@
 \usepackage{parskip}
 \linespread{0.8} % si c'est trop proche, personnellement je peux me perdre dans les lignes
 \setlength{\parskip}{15pt plus2pt} % si j'écris en paragraphe, je veux qu'on puisse voir ces paragraphes
+
 \usepackage[french]{babel}
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 
@@ -183,8 +184,102 @@ Ce qui laisse la possibilité de mixer ces deux approches pour essayer de comble
 Néanmoins, cette approche demande de gros efforts d'implémentation, beaucoup de test car il y a beaucoup plus de facteurs mouvants dans le système, pour des effets sur la performances qu'on peut obtenir en choississant un système et l'optimisation bien avec le même effort (mais un système mixte et optimisé pourrait être plus rapide).
 
 \subsubsection{Simulateur SPH (Smoothed Paricle Hydrodynamics)}
-C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord pencher sur une approche Newtonienne, mais TODO
-TODO
+
+C'est le simulateur que nous avons décider d'implémenté, nous avons d'abord penché sur une approche Newtonienne pour des raisons de simplicité, mais cette approche nous permets d'explorer plus de choses, sans non plus être incroyablement complexe niveau théorique ou pratique.
+
+\subsubsection{Repréentation des particules}
+
+Chaque particules sont caractérisées par:
+
+\begin{itemize}
+    \item un vecteur position \(\vec{r}\) (le \(p\) est déjà pris pour la pression)
+    \item un vecteur vitesse \(\vec{v}\)
+    \item une densité \(\rho\)
+    \item une pression \(p\)
+\end{itemize}
+
+Chaque particule possède également une masse \(m\) partagé avec les autres particules, choisi de manière à respecter la masse total du fluide.
+
+\subsubsection{Fonction de lissage (Kernel)}
+
+L'originalité de SPH repose sur l'utilisation d'un noyau de lissage \(W(r, h)\), une fonction radiale (ne dépendant seulement de la distance) pondérant l'influence d'une particule en fonction de la distance \(r = \norm{\vec{r}_i - \vec{r}_j}\) entre les particules \(i\) et \(j\) (on impose aussi \(\vec{r}_i \ne \vec{r}_j\)), définit par:
+\[ W(r, h) = \begin{cases}
+        \frac{4}{\pi h^3}(h-r)^2 & \text{si}\, r < h \\
+        0 & \text{sinon}
+    \end{cases}
+\]
+
+On a que pour n'importe quel grandeux physique \(A\) sur un point (n'étant pas forcément une particule), on peut l'approximer par:
+
+\[
+    A(\vec{r}) = \sum_{i} m_i \frac{A_i}{\rho_i} W(\norm{\vec{r} - \vec{r_i}}, h)
+\]
+
+où \(A_i\) est cette grandeur à la particule \(i\).
+
+Sa dérivé spatiale est également utilisée pour calculer les forces de pression, avec \(r < h\):
+
+\[
+    \grad W(r, h) = -\frac{8}{\pi h^3}(h - r)\frac{\vec{r}}{r}
+\]
+
+\subsubsection{Calcul de densité}
+
+La densité locale \(\rho_i\) est estimée à partir des particules voisines:
+
+\[
+    \rho_i = \sum_j m_j W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+Ce qui fait sens physiquement, une masse pondéré par le volume du voisinage.
+
+\subsubsection{Modèle de pression - Équation de Tait}
+
+Afin de stabiliser et d'éviter les oscillations numériques, une équation d'état non-linéaire est utilisée:
+
+\[
+    P_i =  k \left (\left ( \frac{\rho_i}{\rho_0}\right )^\gamma - 1 \right )
+\]
+
+avec:
+
+\begin{itemize}
+    \item \(\rho_0\): la densité au repos (exemple: 1000kg/m\(^2\) pour l'eau)
+    \item \(k\): constante de raideur (pressureCoefficient)
+    \item \(\gamma\): exposan (souvent entre 5 et 7, ici fixé à 7)
+\end{itemize}
+
+Ce modèle évite les pressions négatives et assurre une réponse plus fluide à la compression.
+
+On pourrait se dire puisque notre fluide est ``incompréssible'' que il ne devrait pas avoir de différence entre \(\rho_0\) et \(\rho_i\), mais nous faisons une simulations, au long terme le fluide agi de manière incompréssible en agissant contre la pression, mais ce n'est pas instantanné.
+
+\subsubsection{Force de pression}
+
+La force de pression exercée sur une particule \(i\) est calculée par
+
+\[
+    \vec{f_i}^\text{pression} = - \sum_j m_j \left ( \frac{P_i + P_j}{2\rho_j}\right ) \grad W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+Ce terme assure la répulsion entre les paricules trop proches et la cohésion du fluide.
+
+\subsubsection{Viscosité}
+
+Un terme de viscosité artificielle permet de modéliser l'amortissement des vitesses relatives et d'éviter les artéfacts numériques, ce terme est nécessaire dû à notre méthode de résolution d'équation différentiel (notre ``intégrateur''), en calculant l'état suivant à partir de l'état actuel, l'énergie à tendance à se créer à cause des erreurs numériques (et en calculant l'état suivant selon comment on calculerait l'état précédent pour être celui actuel, l'énergie à tendance à se perdre, créant de soi une viscosité qu'on aurait à réduire, des approches complexes existent, tel que les intégrateurs {\emph {simpléctiques}} qui intégres en restant sur la surface d'un {\emph {simplexe}}, obtenu avec les équations Hamiltoniennes de la méchaniques, mais ce sujet bien qu'intéressant et source d'amélioration n'a pas sa place à être trop développer ici). Ce terme est donné par:
+
+\[
+    \vec{f_i}^\text{viscosité} = \mu \sum_j m_j \left ( \frac{\vec{v_j} + \vec{v_i}}{\rho_j}\right ) \grad W(\norm{\vec{r_i} - \vec{r_j}}, h)
+\]
+
+où \(\mu\) est le coefficient de viscosité propre au fluide.
+
+\subsubsection{Force externe}
+
+Une force de gravité est aussi appliquer à chaque particules:
+
+\[
+    \vec{f_i}^\text{gravité} = m_i \vec{g}
+\]
 
 \section{Le projet}
 \subsection{Pre-Unity: le choix de rust}

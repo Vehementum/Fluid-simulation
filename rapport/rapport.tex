@@ -2,6 +2,7 @@
 \usepackage[french]{babel}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{hyperref}
 \usepackage{physics}
 
 \author{Stephane LEJEUNE, Jacques PHAM BA NIEN} % ajouter vos prénoms/noms
@@ -79,14 +80,35 @@ Tout du long, nous allons simplifier notre fluide étudier, en général, les fl
 \end{itemize}
 
 \subsection{Simulateurs}
+
+Certes maintenant on a ``comment les fluides doivent agir'', on n'a pas ``comment les faire agir comme tel''.
+
+Pour observer la vie réel, cela n'a pas d'importance, pour un mathématicien non plus, mais un ordinateur de peut pas gérer des équations différentiels de manière exactes sur un volume continu, il y aurait juste beaucoup trop de données à stoquer et de calcul à faire (même, une infinité non dénombrable, d'où cette incapacité).
+
+Ainsi, on est obliger de simplifier notre tache, au lieu d'obtenir un système agissant {\emph exactement} comme un fluide idéal, il faut faire un système qui agit {\emph approximativement} comme un fluide idéal, les physiciens font déjà cela pour simplifier les calculs (nous ne faisons pas en général de la théories des probabilités et des équations depuis le quantique pour des fluides, car il y aurait trop de termes agissant entre eux, obscursissant les calculs, et même pourrait rendre des équations insolvables de manière numériques), en informatique, nous allons passer du continu au discret, perdant ainsi de la précision pour en échange, avoir de la possibilité et de la vitesse de calcul.
+
+Il y a plusieurs manières de discrétiser notre problème:
+
 \subsubsection{Simulateur Newtonien}
+
+On peut discretiser notre problème en considérant d'avoir une grille de vecteurs au lieu d'un champs. 
 TODO
+
 \subsubsection{Simulateur Lagrangien}
+Une autre approche est  de discretiser notre problème en une manière plus intuitive, en simulant nos {\emph particules} d'eaux, néanmoins, dans un fluide usuel, il y a beaucoup trop de particules, donc à la place, on va simuler des très grosses particules, ce qui est absurde physiquement mais marche relativement bien.
+
 TODO
 \subsubsection{Simulateur Mixtes}
+
+TODO
+
+\subsubsection{Comparaison des approches}
 TODO
 
 \section{Le projet}
+\subsection{Pre-unity: le choix de rust}
+TODO
+\subsection{Post-unity: l'abandon de rust}
 TODO
 
 \section{Conclusion}
